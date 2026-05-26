@@ -438,6 +438,87 @@
       font-size:13px;
     }
 
+    /* ── "Edit segment" button (shown next to subtitle when a segment is active) ── */
+    .cust-sub-row {
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:2px;
+    }
+    .cust-sub-row .chart-sub { margin-top:0; }
+    .btn-edit-seg {
+      display:inline-flex; align-items:center; gap:5px;
+      background:var(--bg); border:1px solid var(--border);
+      padding:4px 10px; border-radius:14px; cursor:pointer;
+      font-size:11.5px; font-weight:600; color:var(--slate);
+      transition:all 0.15s; font-family:inherit;
+    }
+    .btn-edit-seg:hover { background:white; border-color:var(--slate-lt); color:var(--navy); }
+    .btn-edit-seg svg { width:11px; height:11px; }
+
+    /* ── Segment Edit Modal ── */
+    .modal-backdrop {
+      position:fixed; inset:0; background:rgba(15,30,53,0.45);
+      display:flex; align-items:center; justify-content:center;
+      z-index:1000; padding:24px; backdrop-filter:blur(2px);
+    }
+    .modal-backdrop[hidden] { display:none; }
+    .modal-card {
+      background:white; border-radius:20px; max-width:480px; width:100%;
+      box-shadow:0 12px 48px rgba(0,0,0,0.18);
+      display:flex; flex-direction:column; max-height:90vh; overflow:hidden;
+    }
+    .modal-card header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:20px 24px; border-bottom:1px solid var(--border);
+    }
+    .modal-card header h2 {
+      font-size:16px; font-weight:800; letter-spacing:-0.01em; color:var(--navy);
+    }
+    .modal-close {
+      background:none; border:none; cursor:pointer; padding:6px 10px;
+      font-size:15px; color:var(--slate); border-radius:8px; line-height:1;
+      font-family:inherit; font-weight:600;
+    }
+    .modal-close:hover { background:var(--bg); color:var(--navy); }
+    .modal-body { padding:22px 24px; overflow-y:auto; flex:1; }
+    .modal-card footer {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 24px; border-top:1px solid var(--border); gap:12px;
+      background:var(--bg);
+    }
+    .seg-edit-preview { font-size:12.5px; color:var(--slate); font-weight:500; }
+    .seg-edit-preview strong { color:var(--navy); font-weight:700; }
+    .seg-edit-actions { display:flex; gap:8px; }
+
+    /* Modal form fields */
+    .seg-field { margin-bottom:18px; }
+    .seg-field:last-child { margin-bottom:0; }
+    .seg-field > label {
+      display:block; font-size:11px; font-weight:700; color:var(--slate);
+      text-transform:uppercase; letter-spacing:0.9px; margin-bottom:8px;
+    }
+    .seg-input, .seg-select {
+      width:100%; padding:10px 13px; border:1.5px solid var(--border);
+      border-radius:10px; font-size:14px; font-family:inherit; color:var(--navy);
+      background:white; outline:none; transition:border-color 0.15s, box-shadow 0.15s;
+    }
+    .seg-input:focus, .seg-select:focus {
+      border-color:var(--orange);
+      box-shadow:0 0 0 3px rgba(255,87,50,0.12);
+    }
+    .seg-field-row { display:flex; gap:10px; }
+    .seg-field-row > * { flex:1; }
+    .seg-radio-group { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+    .seg-radio-item {
+      display:flex; align-items:flex-start; gap:10px; padding:11px 14px;
+      border:1.5px solid var(--border); border-radius:10px; cursor:pointer;
+      transition:all 0.15s; background:white;
+    }
+    .seg-radio-item:hover { background:var(--bg); }
+    .seg-radio-item.selected { border-color:var(--orange); background:var(--orange-bg); }
+    .seg-radio-item input[type="radio"] { margin-top:3px; accent-color:var(--orange); }
+    .seg-radio-item-text { display:flex; flex-direction:column; gap:2px; }
+    .seg-radio-item-label { font-size:13.5px; font-weight:600; color:var(--navy); }
+    .seg-radio-item-hint { font-size:12px; color:var(--slate); line-height:1.4; }
+
     /* ── INSIGHT CARDS ── */
     .insight-row { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-bottom:18px; }
     .insight-card {
@@ -799,7 +880,14 @@
       <div class="chart-header" style="margin-bottom:14px">
         <div>
           <div class="chart-title">Customer Analysis</div>
-          <div class="chart-sub" id="custSub">Ranked by total spend this period · mobile numbers masked for privacy</div>
+          <div class="cust-sub-row">
+            <span class="chart-sub" id="custSub">Ranked by total spend this period · mobile numbers masked for privacy</span>
+            <!-- Edit segment button — appears only when a specific segment chip is active -->
+            <button class="btn-edit-seg" id="editSegBtn" hidden onclick="openSegmentEditor()">
+              <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+              Edit segment
+            </button>
+          </div>
         </div>
         <button class="btn btn-ghost" onclick="showToast('Viewing all customers')">View all</button>
       </div>
@@ -1058,6 +1146,24 @@
 
   </div><!-- /content -->
 </div><!-- /main -->
+
+<!-- ── Segment Edit Modal — opened by the "Edit segment" button ── -->
+<div id="segEditBackdrop" class="modal-backdrop" hidden role="presentation">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="segEditTitle" onclick="event.stopPropagation()">
+    <header>
+      <h2 id="segEditTitle">Edit segment</h2>
+      <button class="modal-close" id="segEditClose" aria-label="Close" onclick="closeSegmentEditor()">Close ✕</button>
+    </header>
+    <div class="modal-body" id="segEditBody"></div>
+    <footer>
+      <div class="seg-edit-preview" id="segEditPreview">Preview: — customers</div>
+      <div class="seg-edit-actions">
+        <button class="btn btn-ghost" onclick="closeSegmentEditor()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSegmentEditor()">Update</button>
+      </div>
+    </footer>
+  </div>
+</div>
 
 <!-- Toast -->
 <div id="toast" style="
@@ -1391,23 +1497,110 @@ function setPeriod(p, btn) {
 // Mobile numbers masked POPIA-style: first 3 digits + last 4, middle obfuscated.
 // No names, no full numbers — anonymised analytics only.
 //
-// Each customer carries a `segments` array of 1–3 tags. Examples:
-//   ['vip','active']         — top spender who's also recently active
-//   ['active','growing','new'] — fresh signup gaining momentum
-//   ['slipping']             — Slipping & Churned are EXCLUSIVE — never stacked.
-//
-// `joinedDaysAgo` drives the `new` segment (≤ 30 days since signup).
+// Segments are COMPUTED from editable rules (SEGMENT_RULES) + raw customer
+// data (spend, visits, joinedDaysAgo, lastVisit). The hardcoded `segments`
+// arrays on each customer get overwritten at init by recomputeAllSegments().
+// Slipping and Churned are EXCLUSIVE — a customer matching either gets ONLY
+// that tag.
 const SEGMENT_META = {
-  new:      { label:'New',      pill:'violet', dot:'new-d',    desc:'Joined in the last 30 days' },
-  vip:      { label:'VIP',      pill:'green',  dot:'vip',      desc:'R1,000+ spend · 10+ visits' },
-  active:   { label:'Active',   pill:'blue',   dot:'active-d', desc:'Visited in last 30 days' },
-  growing:  { label:'Growing',  pill:'amber',  dot:'growing',  desc:'Visit frequency trending up' },
-  slipping: { label:'Slipping', pill:'red',    dot:'slipping', desc:'No visit in 30–60 days · exclusive tag' },
-  churned:  { label:'Churned',  pill:'gray',   dot:'churned',  desc:'No visit in 60+ days · exclusive tag' },
+  new:      { label:'New',      pill:'violet', dot:'new-d'     },
+  vip:      { label:'VIP',      pill:'green',  dot:'vip'       },
+  active:   { label:'Active',   pill:'blue',   dot:'active-d'  },
+  growing:  { label:'Growing',  pill:'amber',  dot:'growing'   },
+  slipping: { label:'Slipping', pill:'red',    dot:'slipping'  },
+  churned:  { label:'Churned',  pill:'gray',   dot:'churned'   },
 };
 
 // Stable visual order when a customer has multiple tags (used in the table cell).
 const SEG_DISPLAY_ORDER = ['vip', 'active', 'growing', 'new', 'slipping', 'churned'];
+
+// ── Editable rule definitions ──
+// DEFAULT_RULES is the immutable baseline (used for "Reset" affordance later).
+// SEGMENT_RULES is a deep-cloned working copy — the edit modal mutates this.
+const DEFAULT_RULES = {
+  new:      { type: 'joined-within',    days: 30 },
+  vip:      { type: 'spend-visits',     minSpend: 1000, minVisits: 10 },
+  active:   { type: 'visited-within',   days: 30 },
+  growing:  { type: 'growing-default',  minVisits: 5, maxSpend: 1000, maxLastVisit: 30 },
+  slipping: { type: 'no-visit-between', minDays: 30, maxDays: 60 },
+  churned:  { type: 'no-visit-since',   days: 60 },
+};
+const SEGMENT_RULES = JSON.parse(JSON.stringify(DEFAULT_RULES));
+
+// Track which segment chip is currently active. Used by the Edit button.
+let currentSegment = 'all';
+
+// Parse the human-readable lastVisit string into a numeric days-ago value
+// so rule predicates can do numeric comparisons.
+function lastVisitDaysFromText(s) {
+  if (!s) return Infinity;
+  const t = String(s).toLowerCase().trim();
+  if (t === 'today') return 0;
+  const m = t.match(/(\d+)\s*day/);
+  return m ? parseInt(m[1], 10) : Infinity;
+}
+
+// Plain-English description of the current rule for a segment.
+function describeRule(seg) {
+  const r = SEGMENT_RULES[seg];
+  if (!r) return '';
+  switch (r.type) {
+    case 'joined-within':
+      return 'Joined in the last ' + r.days + ' days';
+    case 'visited-within':
+      return 'Visited in the last ' + r.days + ' days';
+    case 'spend-visits':
+      return 'R' + r.minSpend.toLocaleString('en-ZA') + '+ spend · ' + r.minVisits + '+ visits';
+    case 'top-n':
+      return 'Top ' + r.n + ' customers by spend';
+    case 'growing-default':
+      return r.minVisits + '+ visits in last ' + r.maxLastVisit + ' days · under R' + r.maxSpend.toLocaleString('en-ZA');
+    case 'no-visit-between':
+      return 'No visit ' + r.minDays + '–' + r.maxDays + ' days ago · exclusive tag';
+    case 'no-visit-since':
+      return 'No visit in ' + r.days + '+ days · exclusive tag';
+  }
+  return '';
+}
+
+// Evaluate the rule for a given segment against a single customer.
+function customerMatches(c, seg) {
+  const r = SEGMENT_RULES[seg];
+  if (!r) return false;
+  const lvd = lastVisitDaysFromText(c.lastVisit);
+  switch (r.type) {
+    case 'joined-within':    return c.joinedDaysAgo <= r.days;
+    case 'visited-within':   return lvd <= r.days;
+    case 'spend-visits':     return c.spend >= r.minSpend && c.visits >= r.minVisits;
+    case 'top-n':            return c._spendRank != null && c._spendRank <= r.n;
+    case 'growing-default':  return c.visits >= r.minVisits && c.spend < r.maxSpend && lvd <= r.maxLastVisit;
+    case 'no-visit-between': return lvd >= r.minDays && lvd <= r.maxDays;
+    case 'no-visit-since':   return lvd > r.days;
+  }
+  return false;
+}
+
+// Compute the tag list for a customer. Exclusive rules (Churned, Slipping)
+// short-circuit and return a single-element array.
+function deriveSegments(c) {
+  if (customerMatches(c, 'churned'))  return ['churned'];
+  if (customerMatches(c, 'slipping')) return ['slipping'];
+  const out = [];
+  for (const seg of ['new', 'vip', 'active', 'growing']) {
+    if (customerMatches(c, seg)) out.push(seg);
+  }
+  return out;
+}
+
+// One pass: annotate spend rank (so top-N rules work) + recompute all segments.
+// Call this at init and after every rule change.
+function recomputeAllSegments() {
+  const sorted = CUSTOMERS.slice().sort((a, b) => b.spend - a.spend);
+  sorted.forEach((c, i) => { c._spendRank = i + 1; });
+  for (const c of CUSTOMERS) {
+    c.segments = deriveSegments(c);
+  }
+}
 
 const CUSTOMERS = [
   // ── VIP (all also Active; some also New) ────────────────────────────
@@ -1557,26 +1750,286 @@ function updateSegmentCounts() {
 }
 
 function initSegmentFilter() {
+  // Compute segments BEFORE first render so the table reflects the rules.
+  recomputeAllSegments();
   updateSegmentCounts();
   renderCustomers('all');
-  const sub = document.getElementById('custSub');
 
   document.querySelectorAll('.seg-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       document.querySelectorAll('.seg-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       const seg = chip.getAttribute('data-seg');
+      currentSegment = seg;
       renderCustomers(seg);
-      if (sub) {
-        if (seg === 'all') {
-          sub.textContent = 'Ranked by total spend this period · mobile numbers masked for privacy';
-        } else {
-          const meta = SEGMENT_META[seg];
-          sub.textContent = meta.label + ' segment · ' + meta.desc;
-        }
-      }
+      updateCustSubtitle(seg);
     });
   });
+
+  // Close modal on ESC or backdrop click.
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('segEditBackdrop').hidden) {
+      closeSegmentEditor();
+    }
+  });
+  document.getElementById('segEditBackdrop').addEventListener('click', closeSegmentEditor);
+}
+
+// ═══════════════════ SEGMENT EDIT MODAL ═══════════════════
+// _segEditCurrent: which segment we're editing (e.g. 'vip')
+// _segEditDraft:   pending rule object — applied only on Update
+let _segEditCurrent = null;
+let _segEditDraft = null;
+
+function openSegmentEditor() {
+  if (currentSegment === 'all') return; // safety — button shouldn't be visible
+  _segEditCurrent = currentSegment;
+  _segEditDraft = JSON.parse(JSON.stringify(SEGMENT_RULES[currentSegment]));
+  document.getElementById('segEditTitle').textContent =
+    'Edit: ' + SEGMENT_META[currentSegment].label + ' segment';
+  renderSegmentForm();
+  updateSegEditPreview();
+  document.getElementById('segEditBackdrop').hidden = false;
+}
+
+function closeSegmentEditor() {
+  document.getElementById('segEditBackdrop').hidden = true;
+  _segEditCurrent = null;
+  _segEditDraft = null;
+}
+
+function saveSegmentEditor() {
+  if (!_segEditCurrent || !_segEditDraft) return;
+  // Commit the draft, then re-run the pipeline.
+  SEGMENT_RULES[_segEditCurrent] = _segEditDraft;
+  recomputeAllSegments();
+  updateSegmentCounts();
+  renderCustomers(currentSegment);
+  updateCustSubtitle(currentSegment);
+  showToast(SEGMENT_META[_segEditCurrent].label + ' segment updated');
+  closeSegmentEditor();
+}
+
+// Recompute the "Preview: N customers will be tagged" line as the user edits.
+function updateSegEditPreview() {
+  // Temporarily swap in the draft rule so customerMatches() sees the new values.
+  const saved = SEGMENT_RULES[_segEditCurrent];
+  SEGMENT_RULES[_segEditCurrent] = _segEditDraft;
+  // Refresh spend rank in case rule type changed to top-n.
+  const sorted = CUSTOMERS.slice().sort((a, b) => b.spend - a.spend);
+  sorted.forEach((c, i) => { c._spendRank = i + 1; });
+  let count = 0;
+  for (const c of CUSTOMERS) if (customerMatches(c, _segEditCurrent)) count++;
+  SEGMENT_RULES[_segEditCurrent] = saved;
+
+  const el = document.getElementById('segEditPreview');
+  el.replaceChildren();
+  el.appendChild(document.createTextNode('Preview: '));
+  const strong = document.createElement('strong');
+  strong.textContent = count + ' customer' + (count === 1 ? '' : 's');
+  el.appendChild(strong);
+  el.appendChild(document.createTextNode(' will be tagged'));
+}
+
+// Build the modal body for the currently-edited segment.
+function renderSegmentForm() {
+  const body = document.getElementById('segEditBody');
+  body.replaceChildren();
+  const seg = _segEditCurrent;
+  const draft = _segEditDraft;
+
+  switch (seg) {
+    case 'new':
+      body.appendChild(buildSelectField({
+        label: 'Joined in the last',
+        value: draft.days,
+        options: [{v:7,t:'7 days'},{v:14,t:'14 days'},{v:30,t:'30 days'},{v:60,t:'60 days'},{v:90,t:'90 days'}],
+        onChange: v => { draft.days = v; updateSegEditPreview(); },
+      }));
+      break;
+
+    case 'active':
+      body.appendChild(buildSelectField({
+        label: 'Visited in the last',
+        value: draft.days,
+        options: [{v:7,t:'7 days'},{v:14,t:'14 days'},{v:30,t:'30 days'},{v:60,t:'60 days'}],
+        onChange: v => { draft.days = v; updateSegEditPreview(); },
+      }));
+      break;
+
+    case 'vip': {
+      // Radio: choose rule type
+      body.appendChild(buildRadioGroup([
+        { value:'spend-visits', label:'Spend & visit threshold',
+          hint:'Customer must meet BOTH a minimum spend and a minimum visit count.' },
+        { value:'top-n', label:'Top N customers by spend',
+          hint:'Always tag the highest N spenders, regardless of count.' },
+      ], draft.type, newType => {
+        // Switch rule types — set sensible defaults for the new shape
+        if (newType === 'spend-visits') {
+          Object.keys(draft).forEach(k => delete draft[k]);
+          Object.assign(draft, { type:'spend-visits', minSpend:1000, minVisits:10 });
+        } else {
+          Object.keys(draft).forEach(k => delete draft[k]);
+          Object.assign(draft, { type:'top-n', n:10 });
+        }
+        renderSegmentForm();
+        updateSegEditPreview();
+      }));
+
+      if (draft.type === 'spend-visits') {
+        const row = document.createElement('div');
+        row.className = 'seg-field-row';
+        row.appendChild(buildNumberField({
+          label:'Min spend (R)', value:draft.minSpend, step:50, min:0,
+          onChange:v => { draft.minSpend = v; updateSegEditPreview(); },
+        }));
+        row.appendChild(buildNumberField({
+          label:'Min visits', value:draft.minVisits, step:1, min:0,
+          onChange:v => { draft.minVisits = v; updateSegEditPreview(); },
+        }));
+        body.appendChild(row);
+      } else {
+        body.appendChild(buildSelectField({
+          label:'Top N customers',
+          value:draft.n,
+          options:[{v:5,t:'Top 5'},{v:10,t:'Top 10'},{v:20,t:'Top 20'},{v:50,t:'Top 50'}],
+          onChange:v => { draft.n = v; updateSegEditPreview(); },
+        }));
+      }
+      break;
+    }
+
+    case 'growing': {
+      const row = document.createElement('div');
+      row.className = 'seg-field-row';
+      row.appendChild(buildNumberField({
+        label:'Min visits', value:draft.minVisits, step:1, min:1,
+        onChange:v => { draft.minVisits = v; updateSegEditPreview(); },
+      }));
+      row.appendChild(buildNumberField({
+        label:'Visited within (days)', value:draft.maxLastVisit, step:1, min:1,
+        onChange:v => { draft.maxLastVisit = v; updateSegEditPreview(); },
+      }));
+      body.appendChild(row);
+      body.appendChild(buildNumberField({
+        label:'Below spend (R) — excludes VIPs', value:draft.maxSpend, step:50, min:0,
+        onChange:v => { draft.maxSpend = v; updateSegEditPreview(); },
+      }));
+      break;
+    }
+
+    case 'slipping': {
+      const row = document.createElement('div');
+      row.className = 'seg-field-row';
+      row.appendChild(buildNumberField({
+        label:'From (days ago)', value:draft.minDays, step:1, min:0,
+        onChange:v => { draft.minDays = v; updateSegEditPreview(); },
+      }));
+      row.appendChild(buildNumberField({
+        label:'To (days ago)', value:draft.maxDays, step:1, min:0,
+        onChange:v => { draft.maxDays = v; updateSegEditPreview(); },
+      }));
+      body.appendChild(row);
+      break;
+    }
+
+    case 'churned':
+      body.appendChild(buildSelectField({
+        label:'No visit in',
+        value:draft.days,
+        options:[{v:30,t:'30+ days'},{v:60,t:'60+ days'},{v:90,t:'90+ days'},{v:120,t:'120+ days'},{v:180,t:'180+ days'}],
+        onChange:v => { draft.days = v; updateSegEditPreview(); },
+      }));
+      break;
+  }
+}
+
+// ── Form field builders (all DOM-safe — no innerHTML) ──
+function buildSelectField({ label, value, options, onChange }) {
+  const wrap = document.createElement('div');
+  wrap.className = 'seg-field';
+  const lbl = document.createElement('label');
+  lbl.textContent = label;
+  wrap.appendChild(lbl);
+  const sel = document.createElement('select');
+  sel.className = 'seg-select';
+  for (const o of options) {
+    const opt = document.createElement('option');
+    opt.value = String(o.v);
+    opt.textContent = o.t;
+    if (o.v === value) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener('change', () => onChange(parseInt(sel.value, 10)));
+  wrap.appendChild(sel);
+  return wrap;
+}
+
+function buildNumberField({ label, value, step, min, onChange }) {
+  const wrap = document.createElement('div');
+  wrap.className = 'seg-field';
+  const lbl = document.createElement('label');
+  lbl.textContent = label;
+  wrap.appendChild(lbl);
+  const inp = document.createElement('input');
+  inp.type = 'number';
+  inp.className = 'seg-input';
+  inp.value = String(value);
+  if (min != null) inp.min = String(min);
+  if (step != null) inp.step = String(step);
+  inp.addEventListener('input', () => {
+    const v = Number(inp.value);
+    if (!Number.isNaN(v) && v >= 0) onChange(v);
+  });
+  wrap.appendChild(inp);
+  return wrap;
+}
+
+function buildRadioGroup(options, selectedValue, onChange) {
+  const group = document.createElement('div');
+  group.className = 'seg-radio-group';
+  for (const o of options) {
+    const item = document.createElement('label');
+    item.className = 'seg-radio-item' + (o.value === selectedValue ? ' selected' : '');
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.name = 'seg-rule-type';
+    radio.value = o.value;
+    radio.checked = o.value === selectedValue;
+    radio.addEventListener('change', () => { if (radio.checked) onChange(o.value); });
+    item.appendChild(radio);
+    const txt = document.createElement('div');
+    txt.className = 'seg-radio-item-text';
+    const t1 = document.createElement('div');
+    t1.className = 'seg-radio-item-label';
+    t1.textContent = o.label;
+    txt.appendChild(t1);
+    if (o.hint) {
+      const t2 = document.createElement('div');
+      t2.className = 'seg-radio-item-hint';
+      t2.textContent = o.hint;
+      txt.appendChild(t2);
+    }
+    item.appendChild(txt);
+    group.appendChild(item);
+  }
+  return group;
+}
+
+// Update the subtitle text below "Customer Analysis" and toggle the Edit button.
+function updateCustSubtitle(seg) {
+  const sub = document.getElementById('custSub');
+  const btn = document.getElementById('editSegBtn');
+  if (!sub) return;
+  if (seg === 'all') {
+    sub.textContent = 'Ranked by total spend this period · mobile numbers masked for privacy';
+    if (btn) btn.hidden = true;
+    return;
+  }
+  const meta = SEGMENT_META[seg];
+  sub.textContent = meta.label + ' segment · ' + describeRule(seg);
+  if (btn) btn.hidden = false;
 }
 
 // ═══════════════════ TOAST ═══════════════════
