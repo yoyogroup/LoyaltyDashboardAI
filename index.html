@@ -317,6 +317,44 @@
     .pill.green { background:#D1FAE5; color:#065F46; }
     .pill.amber { background:#FEF3C7; color:#92400E; }
     .pill.blue { background:#DBEAFE; color:#1E40AF; }
+    .pill.red { background:#FEE2E2; color:#991B1B; }
+    .pill.gray { background:#E5E7EB; color:#374151; }
+
+    /* ── SEGMENT FILTER CHIPS ── */
+    .seg-row {
+      display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;
+    }
+    .seg-chip {
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 14px; border-radius:24px; cursor:pointer;
+      background:var(--bg); border:1.5px solid var(--border);
+      font-size:12.5px; font-weight:600; color:var(--slate);
+      transition:all 0.18s ease; user-select:none;
+    }
+    .seg-chip:hover { background:white; border-color:var(--slate-lt); color:var(--navy); }
+    .seg-chip.active {
+      background:var(--navy); border-color:var(--navy); color:white;
+      box-shadow:0 2px 8px rgba(15,30,53,0.25);
+    }
+    .seg-chip .seg-dot {
+      width:7px; height:7px; border-radius:50%; flex-shrink:0;
+    }
+    .seg-chip .seg-count {
+      background:rgba(255,255,255,0.15); color:inherit;
+      padding:1px 8px; border-radius:12px; font-size:11px; font-weight:700;
+      min-width:22px; text-align:center;
+    }
+    .seg-chip:not(.active) .seg-count { background:rgba(15,30,53,0.06); color:var(--navy); }
+    .seg-dot.vip { background:#10B981; }
+    .seg-dot.active-d { background:#3B82F6; }
+    .seg-dot.growing { background:#F59E0B; }
+    .seg-dot.slipping { background:#EF4444; }
+    .seg-dot.churned { background:#9CA3AF; }
+    .seg-dot.all { background:var(--orange); }
+    .seg-empty {
+      text-align:center; padding:32px 16px; color:var(--slate);
+      font-size:13px;
+    }
 
     /* ── INSIGHT CARDS ── */
     .insight-row { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-bottom:18px; }
@@ -855,63 +893,46 @@
       <div class="chart-header" style="margin-bottom:14px">
         <div>
           <div class="chart-title">Top Loyalty Customers</div>
-          <div class="chart-sub">Ranked by total spend this period</div>
+          <div class="chart-sub" id="custSub">Ranked by total spend this period · mobile numbers masked for privacy</div>
         </div>
         <button class="btn btn-ghost" onclick="showToast('Viewing all customers')">View all</button>
       </div>
+
+      <!-- Segment filter chips -->
+      <div class="seg-row" id="segRow">
+        <div class="seg-chip active" data-seg="all">
+          <span class="seg-dot all"></span>All<span class="seg-count" data-count="all">0</span>
+        </div>
+        <div class="seg-chip" data-seg="vip">
+          <span class="seg-dot vip"></span>VIP<span class="seg-count" data-count="vip">0</span>
+        </div>
+        <div class="seg-chip" data-seg="active">
+          <span class="seg-dot active-d"></span>Active<span class="seg-count" data-count="active">0</span>
+        </div>
+        <div class="seg-chip" data-seg="growing">
+          <span class="seg-dot growing"></span>Growing<span class="seg-count" data-count="growing">0</span>
+        </div>
+        <div class="seg-chip" data-seg="slipping">
+          <span class="seg-dot slipping"></span>Slipping<span class="seg-count" data-count="slipping">0</span>
+        </div>
+        <div class="seg-chip" data-seg="churned">
+          <span class="seg-dot churned"></span>Churned<span class="seg-count" data-count="churned">0</span>
+        </div>
+      </div>
+
       <table class="data-table">
         <thead>
           <tr>
-            <th>Customer</th>
+            <th>Mobile</th>
             <th>Total Spend</th>
             <th>Visits</th>
             <th>Avg Basket</th>
             <th>Cashback Earned</th>
-            <th>Status</th>
+            <th>Last Visit</th>
+            <th>Segment</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td><span class="cust-av t">ZN</span>Z. Nkosi</td>
-            <td><strong>R1,247.80</strong></td>
-            <td>14</td>
-            <td>R89.13</td>
-            <td>R62.39</td>
-            <td><span class="pill green">● VIP</span></td>
-          </tr>
-          <tr>
-            <td><span class="cust-av o">SA</span>S. Adams</td>
-            <td><strong>R1,108.40</strong></td>
-            <td>12</td>
-            <td>R92.37</td>
-            <td>R55.42</td>
-            <td><span class="pill green">● VIP</span></td>
-          </tr>
-          <tr>
-            <td><span class="cust-av n">TM</span>T. Mokoena</td>
-            <td><strong>R934.20</strong></td>
-            <td>11</td>
-            <td>R84.93</td>
-            <td>R46.71</td>
-            <td><span class="pill blue">● Active</span></td>
-          </tr>
-          <tr>
-            <td><span class="cust-av t">LP</span>L. Pietersen</td>
-            <td><strong>R882.60</strong></td>
-            <td>10</td>
-            <td>R88.26</td>
-            <td>R44.13</td>
-            <td><span class="pill blue">● Active</span></td>
-          </tr>
-          <tr>
-            <td><span class="cust-av o">KD</span>K. Dlamini</td>
-            <td><strong>R756.30</strong></td>
-            <td>9</td>
-            <td>R84.03</td>
-            <td>R37.82</td>
-            <td><span class="pill amber">● Growing</span></td>
-          </tr>
-        </tbody>
+        <tbody id="custTbody"></tbody>
       </table>
     </div>
 
@@ -1231,6 +1252,153 @@ function setPeriod(p, btn) {
   initCharts(p);
 }
 
+// ═══════════════════ CUSTOMER SEGMENTS ═══════════════════
+// Mobile numbers masked POPIA-style: first 3 digits + last 4, middle obfuscated.
+// No names, no full numbers — anonymised analytics only.
+const SEGMENT_META = {
+  vip:      { label:'VIP',      pill:'green', dot:'vip',      desc:'R1,000+ spend · 10+ visits' },
+  active:   { label:'Active',   pill:'blue',  dot:'active-d', desc:'Visited in last 30 days' },
+  growing:  { label:'Growing',  pill:'amber', dot:'growing',  desc:'Visit frequency trending up' },
+  slipping: { label:'Slipping', pill:'red',   dot:'slipping', desc:'No visit in 30–60 days' },
+  churned:  { label:'Churned',  pill:'gray',  dot:'churned',  desc:'No visit in 60+ days' },
+};
+
+const CUSTOMERS = [
+  // VIP
+  { mobile:'082 ••• 4421', spend:1247.80, visits:14, basket:89.13, cashback:62.39, lastVisit:'2 days ago',  segment:'vip' },
+  { mobile:'083 ••• 7752', spend:1108.40, visits:12, basket:92.37, cashback:55.42, lastVisit:'1 day ago',   segment:'vip' },
+  { mobile:'071 ••• 0913', spend:1064.50, visits:13, basket:81.88, cashback:53.23, lastVisit:'3 days ago',  segment:'vip' },
+  { mobile:'084 ••• 6608', spend:1018.20, visits:11, basket:92.56, cashback:50.91, lastVisit:'today',       segment:'vip' },
+  // Active
+  { mobile:'072 ••• 1184', spend: 934.20, visits:11, basket:84.93, cashback:46.71, lastVisit:'4 days ago',  segment:'active' },
+  { mobile:'076 ••• 8830', spend: 882.60, visits:10, basket:88.26, cashback:44.13, lastVisit:'5 days ago',  segment:'active' },
+  { mobile:'081 ••• 3367', spend: 814.10, visits: 9, basket:90.46, cashback:40.71, lastVisit:'8 days ago',  segment:'active' },
+  { mobile:'073 ••• 5520', spend: 762.40, visits: 9, basket:84.71, cashback:38.12, lastVisit:'11 days ago', segment:'active' },
+  { mobile:'079 ••• 2244', spend: 698.50, visits: 8, basket:87.31, cashback:34.93, lastVisit:'13 days ago', segment:'active' },
+  // Growing
+  { mobile:'082 ••• 9971', spend: 612.30, visits: 7, basket:87.47, cashback:30.62, lastVisit:'6 days ago',  segment:'growing' },
+  { mobile:'084 ••• 4408', spend: 548.90, visits: 6, basket:91.48, cashback:27.45, lastVisit:'9 days ago',  segment:'growing' },
+  { mobile:'071 ••• 1156', spend: 487.20, visits: 6, basket:81.20, cashback:24.36, lastVisit:'12 days ago', segment:'growing' },
+  { mobile:'083 ••• 7783', spend: 432.60, visits: 5, basket:86.52, cashback:21.63, lastVisit:'15 days ago', segment:'growing' },
+  // Slipping
+  { mobile:'076 ••• 2294', spend: 378.40, visits: 5, basket:75.68, cashback:18.92, lastVisit:'38 days ago', segment:'slipping' },
+  { mobile:'072 ••• 6651', spend: 341.10, visits: 4, basket:85.28, cashback:17.06, lastVisit:'44 days ago', segment:'slipping' },
+  { mobile:'081 ••• 0098', spend: 298.70, visits: 4, basket:74.68, cashback:14.94, lastVisit:'51 days ago', segment:'slipping' },
+  // Churned
+  { mobile:'079 ••• 8814', spend: 247.30, visits: 3, basket:82.43, cashback:12.37, lastVisit:'72 days ago', segment:'churned' },
+  { mobile:'073 ••• 3370', spend: 198.40, visits: 3, basket:66.13, cashback: 9.92, lastVisit:'89 days ago', segment:'churned' },
+  { mobile:'084 ••• 5527', spend: 174.80, visits: 2, basket:87.40, cashback: 8.74, lastVisit:'104 days ago',segment:'churned' },
+];
+
+function fmtR(n) { return 'R' + n.toLocaleString('en-ZA', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
+
+function renderCustomers(seg) {
+  const tbody = document.getElementById('custTbody');
+  if (!tbody) return;
+  tbody.replaceChildren(); // safe clear
+
+  const filtered = seg === 'all' ? CUSTOMERS : CUSTOMERS.filter(c => c.segment === seg);
+  filtered.sort((a, b) => b.spend - a.spend);
+
+  if (filtered.length === 0) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 7;
+    td.className = 'seg-empty';
+    td.textContent = 'No customers in this segment for the selected period.';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  // Use DOM APIs (textContent), not innerHTML — XSS-safe per Yoyo guardrails
+  for (const c of filtered) {
+    const meta = SEGMENT_META[c.segment];
+    const tr = document.createElement('tr');
+
+    // Mobile cell — avatar from last 2 digits of unmasked tail
+    const tdMobile = document.createElement('td');
+    const av = document.createElement('span');
+    av.className = 'cust-av ' + (c.segment === 'vip' ? 'o' : c.segment === 'churned' ? 'n' : 't');
+    const tail = c.mobile.slice(-2);
+    av.textContent = tail;
+    tdMobile.appendChild(av);
+    tdMobile.appendChild(document.createTextNode(c.mobile));
+    tr.appendChild(tdMobile);
+
+    // Spend
+    const tdSpend = document.createElement('td');
+    const strong = document.createElement('strong');
+    strong.textContent = fmtR(c.spend);
+    tdSpend.appendChild(strong);
+    tr.appendChild(tdSpend);
+
+    // Visits
+    const tdV = document.createElement('td');
+    tdV.textContent = String(c.visits);
+    tr.appendChild(tdV);
+
+    // Avg basket
+    const tdB = document.createElement('td');
+    tdB.textContent = fmtR(c.basket);
+    tr.appendChild(tdB);
+
+    // Cashback
+    const tdC = document.createElement('td');
+    tdC.textContent = fmtR(c.cashback);
+    tr.appendChild(tdC);
+
+    // Last visit
+    const tdL = document.createElement('td');
+    tdL.textContent = c.lastVisit;
+    tdL.style.color = 'var(--slate)';
+    tdL.style.fontSize = '12.5px';
+    tr.appendChild(tdL);
+
+    // Segment pill
+    const tdSeg = document.createElement('td');
+    const pill = document.createElement('span');
+    pill.className = 'pill ' + meta.pill;
+    pill.textContent = '● ' + meta.label;
+    tdSeg.appendChild(pill);
+    tr.appendChild(tdSeg);
+
+    tbody.appendChild(tr);
+  }
+}
+
+function updateSegmentCounts() {
+  const counts = { all: CUSTOMERS.length, vip:0, active:0, growing:0, slipping:0, churned:0 };
+  for (const c of CUSTOMERS) counts[c.segment]++;
+  document.querySelectorAll('.seg-count').forEach(el => {
+    const k = el.getAttribute('data-count');
+    el.textContent = String(counts[k] || 0);
+  });
+}
+
+function initSegmentFilter() {
+  updateSegmentCounts();
+  renderCustomers('all');
+  const sub = document.getElementById('custSub');
+
+  document.querySelectorAll('.seg-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.seg-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const seg = chip.getAttribute('data-seg');
+      renderCustomers(seg);
+      if (sub) {
+        if (seg === 'all') {
+          sub.textContent = 'Ranked by total spend this period · mobile numbers masked for privacy';
+        } else {
+          const meta = SEGMENT_META[seg];
+          sub.textContent = meta.label + ' segment · ' + meta.desc;
+        }
+      }
+    });
+  });
+}
+
 // ═══════════════════ TOAST ═══════════════════
 let toastTimer;
 function showToast(msg) {
@@ -1249,6 +1417,7 @@ function showToast(msg) {
 document.addEventListener('DOMContentLoaded', () => {
   Chart.defaults.font.family = 'Inter';
   initCharts('30D');
+  initSegmentFilter();
 });
 </script>
 </body>
