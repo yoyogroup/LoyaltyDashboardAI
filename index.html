@@ -43,16 +43,11 @@
       display:flex; flex-direction:column; z-index:50;
     }
     .sidebar-logo {
-      padding:26px 22px 22px;
+      padding:22px 22px 18px;
       border-bottom:1px solid rgba(255,255,255,0.07);
     }
-    .logo-mark { display:flex; align-items:center; gap:10px; }
-    .logo-icon {
-      width:42px; height:30px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
-    }
-    .logo-icon svg { width:42px; height:30px; }
-    .logo-text { font-size:22px; font-weight:900; color:white; letter-spacing:-0.06em; }
-    .logo-sub { font-size:10px; color:rgba(255,255,255,0.35); margin-top:4px; letter-spacing:1.5px; text-transform:uppercase; }
+    .logo-img { height:26px; width:auto; display:block; }
+    .logo-sub { font-size:10px; color:rgba(255,255,255,0.35); margin-top:8px; letter-spacing:1.5px; text-transform:uppercase; }
     .nav-section { padding:16px 14px; flex:1; }
     .nav-group-label {
       font-size:9.5px; font-weight:700; color:rgba(255,255,255,0.28);
@@ -100,13 +95,15 @@
       padding:0 30px; position:sticky; top:0; z-index:40;
       box-shadow:0 1px 0 rgba(0,0,0,0.04);
     }
-    .topbar-left { display:flex; align-items:center; gap:14px; }
+    .topbar-left { display:flex; align-items:center; gap:16px; }
+    .topbar-logo { height:22px; width:auto; display:block; }
+    .topbar-divider { width:1px; height:20px; background:var(--border); }
     .page-badge {
       background:var(--orange-bg); color:var(--orange);
       font-size:11px; font-weight:700; padding:4px 10px;
       border-radius:20px; letter-spacing:0.3px;
     }
-    .page-title { font-size:17px; font-weight:700; color:var(--navy); letter-spacing:-0.06em; }
+    .page-title { font-size:14px; font-weight:600; color:var(--slate); letter-spacing:-0.02em; }
     .topbar-right { display:flex; align-items:center; gap:10px; }
     .period-tabs {
       display:flex; background:var(--bg); border-radius:9px;
@@ -362,16 +359,7 @@
 <!-- ═══════════════════════════════════════════════════ SIDEBAR -->
 <aside class="sidebar">
   <div class="sidebar-logo">
-    <div class="logo-mark">
-      <div class="logo-icon">
-        <svg viewBox="-4 0 56 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Yoyo brandmark: two diagonal band shapes -->
-          <path d="M9,2 L19,2 Q23,2 22,7 L16,27 Q15,32 11,32 L1,32 Q-3,32 -1,27 L5,7 Q6,2 9,2 Z" fill="#FF5732"/>
-          <path d="M27,2 L37,2 Q41,2 40,7 L34,27 Q33,32 29,32 L19,32 Q15,32 17,27 L23,7 Q24,2 27,2 Z" fill="#FF5732"/>
-        </svg>
-      </div>
-      <span class="logo-text">yoyo</span>
-    </div>
+    <img src="assets/logo-white.png" alt="Yoyo" class="logo-img">
     <div class="logo-sub">Merchant Portal</div>
   </div>
 
@@ -428,6 +416,8 @@
 <div class="main">
   <header class="topbar">
     <div class="topbar-left">
+      <img src="assets/logo-black.png" alt="Yoyo" class="topbar-logo">
+      <div class="topbar-divider"></div>
       <span class="page-badge">● Live</span>
       <h1 class="page-title">Loyalty Performance Insights</h1>
     </div>
