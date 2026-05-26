@@ -1,0 +1,5 @@
+# Yoyo Engineering Guardrails — CODEOWNERS
+# All changes require review from the portal owner.
+# High-risk areas (auth, data, payments) require explicit human sign-off.
+
+* @bevan-ducasse
