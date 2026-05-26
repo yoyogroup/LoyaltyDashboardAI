@@ -794,6 +794,58 @@
       </div>
     </div>
 
+    <!-- CUSTOMER ANALYSIS (segment chips + masked-mobile customer table) -->
+    <div class="chart-card" style="margin-bottom:18px">
+      <div class="chart-header" style="margin-bottom:14px">
+        <div>
+          <div class="chart-title">Customer Analysis</div>
+          <div class="chart-sub" id="custSub">Ranked by total spend this period · mobile numbers masked for privacy</div>
+        </div>
+        <button class="btn btn-ghost" onclick="showToast('Viewing all customers')">View all</button>
+      </div>
+
+      <!-- Segment filter chips. Customers can carry up to 3 tags
+           (e.g. VIP+Active+New); Slipping & Churned are exclusive. -->
+      <div class="seg-row" id="segRow">
+        <div class="seg-chip active" data-seg="all">
+          <span class="seg-dot all"></span>All<span class="seg-count" data-count="all">0</span>
+        </div>
+        <div class="seg-chip" data-seg="new">
+          <span class="seg-dot new-d"></span>New<span class="seg-count" data-count="new">0</span>
+        </div>
+        <div class="seg-chip" data-seg="vip">
+          <span class="seg-dot vip"></span>VIP<span class="seg-count" data-count="vip">0</span>
+        </div>
+        <div class="seg-chip" data-seg="active">
+          <span class="seg-dot active-d"></span>Active<span class="seg-count" data-count="active">0</span>
+        </div>
+        <div class="seg-chip" data-seg="growing">
+          <span class="seg-dot growing"></span>Growing<span class="seg-count" data-count="growing">0</span>
+        </div>
+        <div class="seg-chip" data-seg="slipping">
+          <span class="seg-dot slipping"></span>Slipping<span class="seg-count" data-count="slipping">0</span>
+        </div>
+        <div class="seg-chip" data-seg="churned">
+          <span class="seg-dot churned"></span>Churned<span class="seg-count" data-count="churned">0</span>
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Mobile</th>
+            <th>Total Spend</th>
+            <th>Visits</th>
+            <th>Avg Basket</th>
+            <th>Cashback Earned</th>
+            <th>Last Visit</th>
+            <th>Segment</th>
+          </tr>
+        </thead>
+        <tbody id="custTbody"></tbody>
+      </table>
+    </div>
+
     <!-- CHART ROW 1: Revenue Trend + Donut -->
     <div class="charts-row r2">
       <div class="chart-card">
@@ -1002,58 +1054,6 @@
           <p>141 customers tapped their card but didn't enter their mobile number. A terminal prompt nudge at checkout could recover significant loyalty attribution.</p>
         </div>
       </div>
-    </div>
-
-    <!-- TOP CUSTOMERS TABLE -->
-    <div class="chart-card" style="margin-bottom:18px">
-      <div class="chart-header" style="margin-bottom:14px">
-        <div>
-          <div class="chart-title">Top Loyalty Customers</div>
-          <div class="chart-sub" id="custSub">Ranked by total spend this period · mobile numbers masked for privacy</div>
-        </div>
-        <button class="btn btn-ghost" onclick="showToast('Viewing all customers')">View all</button>
-      </div>
-
-      <!-- Segment filter chips. Customers can carry up to 3 tags
-           (e.g. VIP+Active+New); Slipping & Churned are exclusive. -->
-      <div class="seg-row" id="segRow">
-        <div class="seg-chip active" data-seg="all">
-          <span class="seg-dot all"></span>All<span class="seg-count" data-count="all">0</span>
-        </div>
-        <div class="seg-chip" data-seg="new">
-          <span class="seg-dot new-d"></span>New<span class="seg-count" data-count="new">0</span>
-        </div>
-        <div class="seg-chip" data-seg="vip">
-          <span class="seg-dot vip"></span>VIP<span class="seg-count" data-count="vip">0</span>
-        </div>
-        <div class="seg-chip" data-seg="active">
-          <span class="seg-dot active-d"></span>Active<span class="seg-count" data-count="active">0</span>
-        </div>
-        <div class="seg-chip" data-seg="growing">
-          <span class="seg-dot growing"></span>Growing<span class="seg-count" data-count="growing">0</span>
-        </div>
-        <div class="seg-chip" data-seg="slipping">
-          <span class="seg-dot slipping"></span>Slipping<span class="seg-count" data-count="slipping">0</span>
-        </div>
-        <div class="seg-chip" data-seg="churned">
-          <span class="seg-dot churned"></span>Churned<span class="seg-count" data-count="churned">0</span>
-        </div>
-      </div>
-
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Mobile</th>
-            <th>Total Spend</th>
-            <th>Visits</th>
-            <th>Avg Basket</th>
-            <th>Cashback Earned</th>
-            <th>Last Visit</th>
-            <th>Segment</th>
-          </tr>
-        </thead>
-        <tbody id="custTbody"></tbody>
-      </table>
     </div>
 
   </div><!-- /content -->
