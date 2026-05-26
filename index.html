@@ -5,13 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Yoyo – Loyalty Performance Insights</title>
   <!-- Security: CSP restricts scripts/styles to known safe origins only -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; frame-ancestors 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.execute-api.eu-west-1.amazonaws.com; frame-ancestors 'none';">
   <meta http-equiv="X-Frame-Options" content="DENY">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <!-- Prevent search engine indexing of this merchant portal -->
   <meta name="robots" content="noindex, nofollow">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Auth: runs synchronously BEFORE Chart.js so unauth users never download chart code -->
+  <script src="assets/config.js"></script>
+  <script src="assets/auth.js"></script>
+  <script>
+    // Block-render auth gate. If not signed in, auth.js redirects to login.html
+    // and nothing further runs on this page.
+    (function () {
+      var session = window.YoyoAuth.guardSession();
+      if (!session) return; // redirect already issued
+      window.__yoyoSession = session;
+    })();
+  </script>
   <!-- SRI hash locks Chart.js to the exact audited version — prevents CDN tampering -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
           integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g"
@@ -114,6 +126,34 @@
     }
     .page-title { font-size:14px; font-weight:600; color:var(--slate); letter-spacing:-0.02em; }
     .topbar-right { display:flex; align-items:center; gap:10px; }
+
+    /* ── USER IDENTITY PILL (signed-in email + logout) ── */
+    .user-pill {
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 6px 6px 12px;
+      background:var(--bg); border:1px solid var(--border); border-radius:24px;
+      font-size:12.5px; font-weight:600; color:var(--navy);
+      max-width:240px;
+    }
+    .user-pill-dot {
+      width:8px; height:8px; border-radius:50%;
+      background:#10B981; box-shadow:0 0 0 3px rgba(16,185,129,0.18);
+      flex-shrink:0;
+    }
+    .user-pill-email {
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      max-width:160px;
+    }
+    .user-pill-logout {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:26px; height:26px; padding:0; border:none; border-radius:50%;
+      background:white; color:var(--slate); cursor:pointer;
+      transition:background 0.15s, color 0.15s;
+    }
+    .user-pill-logout:hover { background:#FEE2E2; color:#991B1B; }
+    .user-pill-logout:focus-visible {
+      outline:2px solid var(--orange); outline-offset:2px;
+    }
     .period-tabs {
       display:flex; background:var(--bg); border-radius:9px;
       padding:3px; gap:1px;
@@ -484,6 +524,14 @@
         Export
       </button>
       <button class="btn btn-primary" onclick="showToast('Help centre')">Need Help?</button>
+      <!-- Identity pill: shows signed-in email + lets user sign out -->
+      <div id="userPill" class="user-pill" title="Click to sign out" hidden>
+        <span class="user-pill-dot" aria-hidden="true"></span>
+        <span class="user-pill-email" id="userPillEmail"></span>
+        <button type="button" class="user-pill-logout" id="logoutBtn" aria-label="Sign out">
+          <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3 3a1 1 0 011-1h6a1 1 0 110 2H5v12h5a1 1 0 110 2H4a1 1 0 01-1-1V3zm10.293 3.293a1 1 0 011.414 0L18 9.586a1 1 0 010 1.414l-3.293 3.293a1 1 0 01-1.414-1.414L14.586 11H8a1 1 0 110-2h6.586l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -1418,7 +1466,27 @@ document.addEventListener('DOMContentLoaded', () => {
   Chart.defaults.font.family = 'Inter';
   initCharts('30D');
   initSegmentFilter();
+  initUserPill();
 });
+
+// ═══════════════════ USER IDENTITY PILL ═══════════════════
+function initUserPill() {
+  const session = window.__yoyoSession;
+  if (!session) return;
+  const pill = document.getElementById('userPill');
+  const emailEl = document.getElementById('userPillEmail');
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (!pill || !emailEl || !logoutBtn) return;
+
+  // textContent — never innerHTML — when displaying the email (XSS-safe).
+  emailEl.textContent = session.email;
+  pill.hidden = false;
+
+  logoutBtn.addEventListener('click', () => {
+    // window.YoyoAuth.logout() clears the JWT and redirects to login.html.
+    window.YoyoAuth.logout();
+  });
+}
 </script>
 </body>
 </html>

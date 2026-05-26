@@ -1,0 +1,15 @@
+# Lambda dependencies — installed by `npm ci` before `sam deploy`
+backend/src/node_modules/
+
+# SAM build artifacts
+backend/.aws-sam/
+backend/samconfig.toml
+
+# Local env files (never commit)
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

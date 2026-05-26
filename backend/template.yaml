@@ -1,0 +1,198 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Yoyo Loyalty Portal — email + OTP auth backend.
+  Issues 30-day JWTs to verified users on @yoyogroup.com / @yoyorewards.com.
+
+# ─────────────────────────────────────────────────────────────────────
+# Parameters
+# ─────────────────────────────────────────────────────────────────────
+Parameters:
+  AllowedOrigin:
+    Type: String
+    Default: https://yoyogroup.github.io
+    Description: CORS origin that may call this API (the deployed front-end URL).
+
+  AllowedDomainsCsv:
+    Type: String
+    Default: yoyogroup.com,yoyorewards.com
+    Description: Comma-separated list of email domains allowed to sign in.
+
+  ResendFromEmail:
+    Type: String
+    Default: no-reply@yoyogroup.com
+    Description: >
+      The 'From' address for OTP emails. The domain MUST be verified in your
+      Resend account (DNS records published).
+
+  SessionDays:
+    Type: Number
+    Default: 30
+    MinValue: 1
+    MaxValue: 90
+    Description: How long the JWT session lasts, in days.
+
+# ─────────────────────────────────────────────────────────────────────
+# Globals — applied to every function
+# ─────────────────────────────────────────────────────────────────────
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Architectures: [arm64]          # Graviton — cheaper + faster cold starts
+    MemorySize: 256
+    Timeout: 8
+    Tracing: Active                 # X-Ray on by default (Yoyo guardrails)
+    LoggingConfig:
+      LogFormat: JSON               # Structured logs → CloudWatch / Loki friendly
+    Environment:
+      Variables:
+        ALLOWED_DOMAINS: !Ref AllowedDomainsCsv
+        SESSION_DAYS: !Ref SessionDays
+        RESEND_FROM: !Ref ResendFromEmail
+        OTP_TABLE: !Ref OtpTable
+        RATE_TABLE: !Ref RateLimitTable
+        RESEND_SECRET_ARN: !Ref ResendApiKeySecret
+        JWT_SECRET_ARN: !Ref JwtSigningSecret
+
+# ─────────────────────────────────────────────────────────────────────
+# Resources
+# ─────────────────────────────────────────────────────────────────────
+Resources:
+
+  # ─── DynamoDB: OTP store (TTL auto-deletes after 10 min) ──────────
+  OtpTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub yoyo-loyalty-otp-${AWS::StackName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: email_hash
+          AttributeType: S
+      KeySchema:
+        - AttributeName: email_hash
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true              # KMS-managed encryption at rest
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # ─── DynamoDB: per-email rate limit (1 OTP / 60s) ─────────────────
+  RateLimitTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub yoyo-loyalty-rate-${AWS::StackName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: key
+          AttributeType: S
+      KeySchema:
+        - AttributeName: key
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  # ─── Secrets: Resend API key (you populate post-deploy) ───────────
+  ResendApiKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub yoyo-loyalty/resend-api-key-${AWS::StackName}
+      Description: Resend.com API key for sending OTP emails.
+      # No SecretString here — you'll set it via `aws secretsmanager put-secret-value`.
+
+  # ─── Secrets: JWT signing key (auto-generated 64-byte secret) ─────
+  JwtSigningSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub yoyo-loyalty/jwt-signing-key-${AWS::StackName}
+      Description: HS256 signing key for session JWTs.
+      GenerateSecretString:
+        PasswordLength: 64
+        ExcludePunctuation: true
+        IncludeSpace: false
+
+  # ─── API Gateway HTTP API (cheap + fast) ──────────────────────────
+  AuthApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins: [!Ref AllowedOrigin]
+        AllowMethods: [POST, OPTIONS]
+        AllowHeaders: [Content-Type, Authorization]
+        MaxAge: 600
+      # API-wide throttle as a backstop against abuse
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
+      AccessLogSettings:
+        DestinationArn: !GetAtt AuthApiLogGroup.Arn
+        Format: >-
+          {"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","status":"$context.status","protocol":"$context.protocol","responseLength":"$context.responseLength"}
+
+  AuthApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/apigw/yoyo-loyalty-${AWS::StackName}
+      RetentionInDays: 90
+
+  # ─── Lambda: request-otp ──────────────────────────────────────────
+  RequestOtpFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub yoyo-loyalty-request-otp-${AWS::StackName}
+      CodeUri: src/
+      Handler: request-otp.handler
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: POST
+            Path: /auth/request-otp
+      Policies:
+        - DynamoDBCrudPolicy:    { TableName: !Ref OtpTable }
+        - DynamoDBCrudPolicy:    { TableName: !Ref RateLimitTable }
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref ResendApiKeySecret
+
+  # ─── Lambda: verify-otp ───────────────────────────────────────────
+  VerifyOtpFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub yoyo-loyalty-verify-otp-${AWS::StackName}
+      CodeUri: src/
+      Handler: verify-otp.handler
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: POST
+            Path: /auth/verify-otp
+      Policies:
+        - DynamoDBCrudPolicy:    { TableName: !Ref OtpTable }
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref JwtSigningSecret
+
+# ─────────────────────────────────────────────────────────────────────
+# Outputs
+# ─────────────────────────────────────────────────────────────────────
+Outputs:
+  ApiBaseUrl:
+    Description: Paste this into loyalty-portal/assets/config.js as `apiBase`.
+    Value: !Sub https://${AuthApi}.execute-api.${AWS::Region}.amazonaws.com
+  ResendSecretArn:
+    Description: Put your Resend API key here with `aws secretsmanager put-secret-value`.
+    Value: !Ref ResendApiKeySecret
+  JwtSecretArn:
+    Description: JWT signing key — auto-generated; rotate quarterly.
+    Value: !Ref JwtSigningSecret
+  OtpTableName:
+    Value: !Ref OtpTable
+  RateTableName:
+    Value: !Ref RateLimitTable

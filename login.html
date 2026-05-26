@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yoyo – Sign in</title>
+  <!-- Security headers identical to index.html (CSP, frame deny, no-sniff) -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.execute-api.eu-west-1.amazonaws.com; frame-ancestors 'none';">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --orange:#FF5732; --orange-lt:#FF7A57; --orange-bg:#FFF2EE;
+      --navy:#1D1D1F; --navy-mid:#2A2A2C;
+      --teal:#699da9; --teal-lt:#88B5C0; --teal-bg:#EEF5F7;
+      --slate:#64748B; --slate-lt:#94A3B8;
+      --bg:#F5F5F7; --border:#E4E4E4;
+      --r16:16px;
+      --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 14px rgba(0,0,0,0.04);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family:'Inter',-apple-system,sans-serif;
+      background:
+        radial-gradient(ellipse at top left, rgba(105,157,169,0.18), transparent 55%),
+        radial-gradient(ellipse at bottom right, rgba(255,87,50,0.10), transparent 50%),
+        var(--bg);
+      color:var(--navy); min-height:100vh;
+      display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .card {
+      width:100%; max-width:420px; background:white;
+      border-radius:20px; padding:38px 36px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 40px rgba(15,30,53,0.08);
+    }
+    .brand { display:flex; align-items:center; gap:10px; margin-bottom:26px; }
+    .brand img { height:26px; width:auto; display:block; }
+    .brand .pipe { width:1px; height:18px; background:var(--border); }
+    .brand .label { font-size:11px; font-weight:700; color:var(--slate); letter-spacing:1.4px; text-transform:uppercase; }
+    h1 { font-size:24px; font-weight:800; letter-spacing:-0.02em; margin-bottom:8px; }
+    .sub { font-size:14px; color:var(--slate); line-height:1.5; margin-bottom:24px; }
+    label {
+      display:block; font-size:11px; font-weight:700; color:var(--slate);
+      text-transform:uppercase; letter-spacing:0.9px; margin-bottom:8px;
+    }
+    .input, .otp-input {
+      width:100%; padding:14px 16px; border:1.5px solid var(--border);
+      border-radius:12px; font-size:15px; font-family:inherit;
+      color:var(--navy); background:white; transition:border-color 0.15s, box-shadow 0.15s;
+      outline:none;
+    }
+    .input:focus, .otp-input:focus {
+      border-color:var(--orange);
+      box-shadow:0 0 0 3px rgba(255,87,50,0.12);
+    }
+    .otp-input {
+      letter-spacing:14px; text-align:center; font-weight:700;
+      font-size:22px; padding:16px;
+    }
+    .btn-primary {
+      width:100%; margin-top:18px; padding:13px 20px;
+      background:var(--navy); color:white; border:none; border-radius:12px;
+      font-size:14px; font-weight:700; cursor:pointer;
+      transition:background 0.15s, transform 0.05s;
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    }
+    .btn-primary:hover:not(:disabled) { background:var(--navy-mid); }
+    .btn-primary:active:not(:disabled) { transform:scale(0.99); }
+    .btn-primary:disabled { background:var(--slate-lt); cursor:not-allowed; }
+    .btn-ghost {
+      width:100%; margin-top:10px; padding:11px 20px;
+      background:transparent; color:var(--slate); border:none;
+      font-size:13px; font-weight:600; cursor:pointer; border-radius:10px;
+    }
+    .btn-ghost:hover { background:var(--bg); color:var(--navy); }
+    .msg {
+      margin-top:14px; padding:11px 14px; border-radius:10px;
+      font-size:13px; line-height:1.45; display:none;
+    }
+    .msg.show { display:block; }
+    .msg.error { background:#FEE2E2; color:#991B1B; }
+    .msg.info  { background:#DBEAFE; color:#1E40AF; }
+    .msg.ok    { background:#D1FAE5; color:#065F46; }
+    .footer {
+      margin-top:22px; padding-top:18px; border-top:1px solid var(--border);
+      font-size:11.5px; color:var(--slate-lt); text-align:center; line-height:1.5;
+    }
+    .footer strong { color:var(--slate); font-weight:600; }
+    .step-2 { display:none; }
+    .step-2.active { display:block; }
+    .step-1.hidden { display:none; }
+    .email-recap {
+      background:var(--bg); border-radius:10px; padding:10px 14px;
+      font-size:13px; color:var(--navy); margin-bottom:18px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .email-recap .change {
+      font-size:12px; color:var(--orange); cursor:pointer; font-weight:600;
+      background:none; border:none; padding:0;
+    }
+    .email-recap .change:hover { text-decoration:underline; }
+    .spinner {
+      width:14px; height:14px; border:2px solid rgba(255,255,255,0.3);
+      border-top-color:white; border-radius:50%;
+      animation:spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+  </style>
+  <script src="assets/config.js"></script>
+  <script src="assets/auth.js"></script>
+</head>
+<body>
+  <main class="card" role="main">
+    <div class="brand">
+      <img src="assets/logo-black.png" alt="Yoyo">
+      <div class="pipe"></div>
+      <span class="label">Merchant Portal</span>
+    </div>
+
+    <!-- ── STEP 1: email ─────────────────────────────────────────── -->
+    <section class="step-1" id="step1">
+      <h1>Sign in</h1>
+      <p class="sub">Use your Yoyo work email. We'll send a one-time code to verify it's you.</p>
+
+      <form id="emailForm" novalidate autocomplete="on">
+        <label for="emailInput">Work email</label>
+        <input
+          type="email"
+          id="emailInput"
+          class="input"
+          placeholder="you@yoyogroup.com"
+          autocomplete="email"
+          required
+          autofocus
+        >
+        <button type="submit" class="btn-primary" id="emailSubmit">
+          Send one-time code
+        </button>
+      </form>
+      <div class="msg" id="emailMsg" role="alert" aria-live="polite"></div>
+    </section>
+
+    <!-- ── STEP 2: OTP ───────────────────────────────────────────── -->
+    <section class="step-2" id="step2">
+      <h1>Enter your code</h1>
+      <p class="sub">We sent a 6-digit code to your inbox. It expires in 10 minutes.</p>
+
+      <div class="email-recap">
+        <span id="emailRecap">—</span>
+        <button type="button" class="change" id="changeEmailBtn">Change</button>
+      </div>
+
+      <form id="otpForm" novalidate>
+        <label for="otpInput">One-time code</label>
+        <input
+          type="text"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          id="otpInput"
+          class="otp-input"
+          maxlength="6"
+          autocomplete="one-time-code"
+          required
+        >
+        <button type="submit" class="btn-primary" id="otpSubmit">
+          Verify &amp; sign in
+        </button>
+        <button type="button" class="btn-ghost" id="resendBtn">Didn't get it? Resend</button>
+      </form>
+      <div class="msg" id="otpMsg" role="alert" aria-live="polite"></div>
+    </section>
+
+    <div class="footer">
+      <strong>Access restricted</strong> to <strong>@yoyogroup.com</strong> and <strong>@yoyorewards.com</strong> email addresses.<br>
+      Sessions last 30 days per device.
+    </div>
+  </main>
+
+<script>
+(() => {
+  'use strict';
+  const cfg = window.YOYO_CONFIG;
+  const allowedRe = new RegExp('^[^@\\s]+@(' + cfg.allowedDomains.map(d => d.replace(/\./g,'\\.')).join('|') + ')$', 'i');
+
+  // ── DOM refs ──
+  const step1 = document.getElementById('step1');
+  const step2 = document.getElementById('step2');
+  const emailForm = document.getElementById('emailForm');
+  const emailInput = document.getElementById('emailInput');
+  const emailSubmit = document.getElementById('emailSubmit');
+  const emailMsg = document.getElementById('emailMsg');
+  const otpForm = document.getElementById('otpForm');
+  const otpInput = document.getElementById('otpInput');
+  const otpSubmit = document.getElementById('otpSubmit');
+  const otpMsg = document.getElementById('otpMsg');
+  const emailRecap = document.getElementById('emailRecap');
+  const changeEmailBtn = document.getElementById('changeEmailBtn');
+  const resendBtn = document.getElementById('resendBtn');
+
+  let currentEmail = '';
+
+  // ── helpers ──
+  function setMsg(el, text, kind) {
+    el.textContent = text;
+    el.className = 'msg show ' + kind;
+  }
+  function clearMsg(el) {
+    el.textContent = '';
+    el.className = 'msg';
+  }
+  function setLoading(btn, loading, defaultLabel) {
+    btn.disabled = loading;
+    btn.textContent = '';
+    if (loading) {
+      const sp = document.createElement('span');
+      sp.className = 'spinner';
+      btn.appendChild(sp);
+      btn.appendChild(document.createTextNode(' Working…'));
+    } else {
+      btn.textContent = defaultLabel;
+    }
+  }
+  function goToStep2(email) {
+    currentEmail = email;
+    emailRecap.textContent = email;
+    step1.classList.add('hidden');
+    step2.classList.add('active');
+    setTimeout(() => otpInput.focus(), 50);
+  }
+  function goToStep1() {
+    currentEmail = '';
+    step1.classList.remove('hidden');
+    step2.classList.remove('active');
+    clearMsg(otpMsg);
+    otpInput.value = '';
+    setTimeout(() => emailInput.focus(), 50);
+  }
+  function nextPath() {
+    const p = new URLSearchParams(location.search).get('next');
+    if (!p) return 'index.html';
+    // Hard whitelist: only relative paths within this site (no protocol, no //)
+    if (!/^[A-Za-z0-9_\-./?=&%]+$/.test(p)) return 'index.html';
+    if (p.startsWith('//') || p.startsWith('http')) return 'index.html';
+    return p;
+  }
+
+  // ── If user already has a valid session, skip the form entirely ──
+  if (cfg.AUTH_ENABLED) {
+    const existing = window.YoyoAuth.getValidPayload();
+    if (existing) {
+      location.replace(nextPath());
+      return;
+    }
+  } else {
+    // Auth disabled — let the user straight through (preview/dev mode).
+    setMsg(emailMsg, 'Auth wall is currently disabled (pre-launch). Click below to continue to the portal.', 'info');
+    emailSubmit.textContent = 'Continue to portal';
+    emailForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      location.replace(nextPath());
+    });
+    return;
+  }
+
+  // ── STEP 1 submit: request OTP ──
+  emailForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg(emailMsg);
+    const email = (emailInput.value || '').trim().toLowerCase();
+
+    if (!allowedRe.test(email)) {
+      setMsg(emailMsg, 'Use a @yoyogroup.com or @yoyorewards.com email address.', 'error');
+      return;
+    }
+
+    setLoading(emailSubmit, true);
+    try {
+      const res = await fetch(cfg.apiBase + '/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (res.status === 429) {
+        setMsg(emailMsg, 'Too many requests. Please wait a minute and try again.', 'error');
+        return;
+      }
+      if (!res.ok) {
+        // Intentionally vague — don't leak whether the email exists.
+        setMsg(emailMsg, 'We couldn’t send a code right now. Please try again.', 'error');
+        return;
+      }
+      goToStep2(email);
+      setMsg(otpMsg, 'Code sent. Check your inbox.', 'info');
+    } catch (_err) {
+      setMsg(emailMsg, 'Network error. Check your connection and try again.', 'error');
+    } finally {
+      setLoading(emailSubmit, false, 'Send one-time code');
+    }
+  });
+
+  // ── STEP 2 submit: verify OTP ──
+  otpForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg(otpMsg);
+    const code = (otpInput.value || '').trim();
+    if (!/^\d{6}$/.test(code)) {
+      setMsg(otpMsg, 'Enter the 6-digit code from your email.', 'error');
+      return;
+    }
+
+    setLoading(otpSubmit, true);
+    try {
+      const res = await fetch(cfg.apiBase + '/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: currentEmail, code }),
+      });
+      if (res.status === 429) {
+        setMsg(otpMsg, 'Too many attempts. Please request a new code.', 'error');
+        return;
+      }
+      if (!res.ok) {
+        setMsg(otpMsg, 'Invalid or expired code. Please try again or request a new one.', 'error');
+        return;
+      }
+      const data = await res.json();
+      if (!data || typeof data.token !== 'string') {
+        setMsg(otpMsg, 'Unexpected response. Please try again.', 'error');
+        return;
+      }
+      window.YoyoAuth.setToken(data.token);
+      setMsg(otpMsg, 'Signed in. Redirecting…', 'ok');
+      setTimeout(() => location.replace(nextPath()), 350);
+    } catch (_err) {
+      setMsg(otpMsg, 'Network error. Check your connection and try again.', 'error');
+    } finally {
+      setLoading(otpSubmit, false, 'Verify & sign in');
+    }
+  });
+
+  // ── Resend OTP ──
+  resendBtn.addEventListener('click', async () => {
+    if (!currentEmail) return;
+    clearMsg(otpMsg);
+    resendBtn.disabled = true;
+    resendBtn.textContent = 'Sending…';
+    try {
+      const res = await fetch(cfg.apiBase + '/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: currentEmail }),
+      });
+      if (res.status === 429) {
+        setMsg(otpMsg, 'Please wait a minute before requesting another code.', 'error');
+      } else if (!res.ok) {
+        setMsg(otpMsg, 'Couldn’t resend. Try again shortly.', 'error');
+      } else {
+        setMsg(otpMsg, 'New code sent.', 'info');
+      }
+    } catch (_err) {
+      setMsg(otpMsg, 'Network error.', 'error');
+    } finally {
+      resendBtn.disabled = false;
+      resendBtn.textContent = 'Didn’t get it? Resend';
+    }
+  });
+
+  changeEmailBtn.addEventListener('click', goToStep1);
+
+  // Only allow numeric input in OTP field (no paste of letters, etc.)
+  otpInput.addEventListener('input', () => {
+    otpInput.value = otpInput.value.replace(/\D+/g, '').slice(0, 6);
+  });
+})();
+</script>
+</body>
+</html>

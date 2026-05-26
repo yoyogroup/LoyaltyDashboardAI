@@ -21,8 +21,10 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Copy files we want to publish to a temp folder
+          # (the backend/ directory is intentionally excluded — it's deployed via SAM, not Pages)
           mkdir /tmp/site
           cp index.html /tmp/site/
+          cp login.html /tmp/site/
           cp -r assets /tmp/site/
 
           # Create or reset the gh-pages branch
@@ -32,8 +34,9 @@ jobs:
 
           # Restore the site files
           cp /tmp/site/index.html .
+          cp /tmp/site/login.html .
           cp -r /tmp/site/assets .
 
-          git add index.html assets/
+          git add index.html login.html assets/
           git commit -m "deploy: update GitHub Pages $(date -u '+%Y-%m-%d %H:%M UTC')"
           git push origin gh-pages-deploy:gh-pages --force
