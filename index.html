@@ -305,9 +305,43 @@
       background:white; border-radius:var(--r16); padding:22px 24px;
       box-shadow:var(--shadow);
     }
-    .chart-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px; }
+    .chart-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px; gap:12px; }
     .chart-title { font-size:14px; font-weight:700; color:var(--navy); }
     .chart-sub { font-size:12px; color:var(--slate); margin-top:2px; }
+
+    /* ── SINGLE-STAT COMPARISON (Basket, Frequency) ── */
+    .stat-compare {
+      display:flex; align-items:stretch; justify-content:space-between;
+      padding:18px 4px 14px;
+    }
+    .stat-compare-col {
+      flex:1; display:flex; flex-direction:column; align-items:center;
+      gap:6px; text-align:center;
+    }
+    .stat-compare-divider {
+      width:1px; background:var(--border); margin:6px 8px;
+    }
+    .stat-compare-tag {
+      font-size:11px; font-weight:700; letter-spacing:0.9px;
+      text-transform:uppercase; color:var(--slate);
+    }
+    .stat-loyal .stat-compare-tag { color:var(--teal); }
+    .stat-compare-val {
+      font-size:30px; font-weight:800; letter-spacing:-0.02em;
+      color:var(--navy); line-height:1.05;
+      font-variant-numeric:tabular-nums;
+    }
+    .stat-loyal .stat-compare-val { color:var(--teal); }
+    .stat-compare-unit {
+      font-size:11px; color:var(--slate-lt); font-weight:500;
+      letter-spacing:0.04em;
+    }
+    .stat-compare-lift {
+      margin-top:2px; padding:7px 12px;
+      background:var(--orange-bg); color:var(--orange);
+      font-size:12px; font-weight:700; border-radius:8px;
+      text-align:center; letter-spacing:0.02em;
+    }
     .chart-legend { display:flex; gap:12px; }
     .chart-leg-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--slate); font-weight:500; }
     .chart-leg-dot { width:8px; height:8px; border-radius:3px; }
@@ -806,24 +840,56 @@
 
     <!-- CHART ROW 2: Basket / Frequency / Cashback -->
     <div class="charts-row r3">
+      <!-- ── Average Basket Size — single stat, follows top page period ── -->
       <div class="chart-card">
         <div class="chart-header">
           <div>
             <div class="chart-title">Average Basket Size</div>
-            <div class="chart-sub">Loyal vs regular, by week</div>
+            <div class="chart-sub" id="basketSub">Loyalty vs regular · last 30 days</div>
           </div>
         </div>
-        <canvas id="basketChart" height="160"></canvas>
+        <div class="stat-compare" id="basketStat">
+          <div class="stat-compare-col stat-loyal">
+            <div class="stat-compare-tag">Loyalty</div>
+            <div class="stat-compare-val" id="basketLoyal">R—</div>
+          </div>
+          <div class="stat-compare-divider"></div>
+          <div class="stat-compare-col stat-regular">
+            <div class="stat-compare-tag">Regular</div>
+            <div class="stat-compare-val" id="basketRegular">R—</div>
+          </div>
+        </div>
+        <div class="stat-compare-lift" id="basketLift">+—%</div>
       </div>
 
+      <!-- ── Visit Frequency — single stat, has its OWN period selector ── -->
       <div class="chart-card">
         <div class="chart-header">
           <div>
             <div class="chart-title">Visit Frequency</div>
-            <div class="chart-sub">Visits per customer distribution</div>
+            <div class="chart-sub" id="freqSub">Avg visits per customer · last 30 days</div>
+          </div>
+          <div class="period-tabs" id="freqPeriodTabs" role="tablist" aria-label="Frequency period">
+            <button class="period-tab" data-freq="7D"  onclick="setFreqPeriod('7D',this)">7D</button>
+            <button class="period-tab active" data-freq="30D" onclick="setFreqPeriod('30D',this)">30D</button>
+            <button class="period-tab" data-freq="90D" onclick="setFreqPeriod('90D',this)">90D</button>
+            <button class="period-tab" data-freq="12M" onclick="setFreqPeriod('12M',this)">12M</button>
           </div>
         </div>
-        <canvas id="freqChart" height="160"></canvas>
+        <div class="stat-compare" id="freqStat">
+          <div class="stat-compare-col stat-loyal">
+            <div class="stat-compare-tag">Loyalty</div>
+            <div class="stat-compare-val" id="freqLoyal">—</div>
+            <div class="stat-compare-unit">visits</div>
+          </div>
+          <div class="stat-compare-divider"></div>
+          <div class="stat-compare-col stat-regular">
+            <div class="stat-compare-tag">Regular</div>
+            <div class="stat-compare-val" id="freqRegular">—</div>
+            <div class="stat-compare-unit">visits</div>
+          </div>
+        </div>
+        <div class="stat-compare-lift" id="freqLift">+—×</div>
       </div>
 
       <div class="chart-card">
@@ -1054,8 +1120,72 @@ function generateSeries(period) {
 }
 
 // ═══════════════════ CHART INSTANCES ═══════════════════
-let revenueChart, donutChart, basketChart, freqChart, cashbackChart, hoursChart;
+let revenueChart, donutChart, cashbackChart, hoursChart;
 let currentPeriod = '30D';
+let currentFreqPeriod = '30D'; // Visit Frequency card has its OWN period state
+
+// ── Stat comparisons (Basket / Frequency) — period-keyed dummy data ──
+// Keys match the page period tabs and the in-card frequency tabs.
+// When you wire real data, replace these with API responses keyed the same way.
+const PERIOD_LABELS = { '7D':'last 7 days', '30D':'last 30 days', '90D':'last 90 days', '12M':'last 12 months' };
+
+const BASKET_BY_PERIOD = {
+  '7D':  { loyal: 88.40, regular: 65.10 },
+  '30D': { loyal: 84.56, regular: 62.34 },
+  '90D': { loyal: 82.10, regular: 60.80 },
+  '12M': { loyal: 79.50, regular: 58.90 },
+};
+const FREQ_BY_PERIOD = {
+  '7D':  { loyal: 1.8,  regular: 0.6 },
+  '30D': { loyal: 4.2,  regular: 1.4 },
+  '90D': { loyal: 9.8,  regular: 2.7 },
+  '12M': { loyal: 28.4, regular: 6.1 },
+};
+
+function fmtRandTwo(n) {
+  return 'R' + n.toLocaleString('en-ZA', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+function fmtFreq(n) {
+  // 1.8 → "1.8", 28.4 → "28.4"
+  return n.toLocaleString('en-ZA', { minimumFractionDigits:1, maximumFractionDigits:1 });
+}
+
+function renderBasketStat(period) {
+  const d = BASKET_BY_PERIOD[period] || BASKET_BY_PERIOD['30D'];
+  const loyalEl = document.getElementById('basketLoyal');
+  const regEl   = document.getElementById('basketRegular');
+  const liftEl  = document.getElementById('basketLift');
+  const subEl   = document.getElementById('basketSub');
+  if (!loyalEl) return;
+  loyalEl.textContent = fmtRandTwo(d.loyal);
+  regEl.textContent   = fmtRandTwo(d.regular);
+  const liftPct = ((d.loyal - d.regular) / d.regular) * 100;
+  liftEl.textContent = (liftPct >= 0 ? '+' : '') + liftPct.toFixed(1) + '% basket lift vs regular';
+  if (subEl) subEl.textContent = 'Loyalty vs regular · ' + (PERIOD_LABELS[period] || period);
+}
+
+function renderFreqStat(period) {
+  const d = FREQ_BY_PERIOD[period] || FREQ_BY_PERIOD['30D'];
+  const loyalEl = document.getElementById('freqLoyal');
+  const regEl   = document.getElementById('freqRegular');
+  const liftEl  = document.getElementById('freqLift');
+  const subEl   = document.getElementById('freqSub');
+  if (!loyalEl) return;
+  loyalEl.textContent = fmtFreq(d.loyal);
+  regEl.textContent   = fmtFreq(d.regular);
+  // Multiplier feels more intuitive than % here (e.g. "3× more often")
+  const mult = d.regular > 0 ? (d.loyal / d.regular) : 0;
+  liftEl.textContent = mult.toFixed(1) + '× more frequent than regular';
+  if (subEl) subEl.textContent = 'Avg visits per customer · ' + (PERIOD_LABELS[period] || period);
+}
+
+// Called by the in-card period buttons on the Frequency card.
+function setFreqPeriod(p, btn) {
+  currentFreqPeriod = p;
+  document.querySelectorAll('#freqPeriodTabs .period-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderFreqStat(p);
+}
 
 const TEAL = '#699da9', TEAL_A = 'rgba(105,157,169,0.12)';
 const GRAY = '#94A3B8', GRAY_A = 'rgba(148,163,184,0.1)';
@@ -1163,53 +1293,11 @@ function initCharts(period) {
     }
   });
 
-  // ── Basket Chart (grouped bar by week) ──
-  const weeks = ['Wk 1','Wk 2','Wk 3','Wk 4'];
-  const bCtx = document.getElementById('basketChart').getContext('2d');
-  if (basketChart) basketChart.destroy();
-  basketChart = new Chart(bCtx, {
-    type: 'bar',
-    data: {
-      labels: weeks,
-      datasets: [
-        { label:'Loyal', data: [81.2,85.6,83.4,88.0], backgroundColor: TEAL, borderRadius: 6, barPercentage:0.6 },
-        { label:'Regular', data: [60.4,63.8,61.2,65.1], backgroundColor: '#E2E8F0', borderRadius: 6, barPercentage:0.6 }
-      ]
-    },
-    options: {
-      ...chartDefaults,
-      plugins: { ...chartDefaults.plugins, tooltip: {
-        ...chartDefaults.plugins.tooltip,
-        callbacks: { label: ctx => ` R${ctx.parsed.y.toFixed(2)} avg basket — ${ctx.dataset.label}` }
-      }},
-      scales: {
-        ...chartDefaults.scales,
-        y: { ...chartDefaults.scales.y, ticks: { ...chartDefaults.scales.y.ticks, callback: v => 'R'+v }}
-      }
-    }
-  });
-
-  // ── Frequency Chart ──
-  const fCtx = document.getElementById('freqChart').getContext('2d');
-  if (freqChart) freqChart.destroy();
-  freqChart = new Chart(fCtx, {
-    type: 'bar',
-    data: {
-      labels: ['1×','2×','3×','4×','5×','6+×'],
-      datasets: [
-        { label:'Loyal', data: [22,45,68,52,38,22], backgroundColor: TEAL+'CC', borderRadius:5, barPercentage:0.65 },
-        { label:'Regular', data: [140,95,62,31,9,1], backgroundColor: '#E2E8F0', borderRadius:5, barPercentage:0.65 }
-      ]
-    },
-    options: {
-      ...chartDefaults,
-      plugins: { ...chartDefaults.plugins, tooltip: {
-        ...chartDefaults.plugins.tooltip,
-        callbacks: { label: ctx => ` ${ctx.parsed.y} customers — ${ctx.dataset.label}` }
-      }},
-      scales: { ...chartDefaults.scales }
-    }
-  });
+  // ── Basket + Frequency: single-stat comparisons (not charts) ──
+  // Basket follows the top-page period (`currentPeriod`).
+  // Frequency has its own period state (`currentFreqPeriod`).
+  renderBasketStat(currentPeriod);
+  renderFreqStat(currentFreqPeriod);
 
   // ── Cashback Chart ──
   const cbCtx = document.getElementById('cashbackChart').getContext('2d');
@@ -1307,7 +1395,9 @@ function updateKPIs(data, period) {
 // ═══════════════════ PERIOD SWITCH ═══════════════════
 function setPeriod(p, btn) {
   currentPeriod = p;
-  document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+  // Scope to the TOP-PAGE tabs only — the Frequency card has its own tabs
+  // that must not be reset by the page-level period switch.
+  document.querySelectorAll('#periodTabs .period-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   initCharts(p);
 }
