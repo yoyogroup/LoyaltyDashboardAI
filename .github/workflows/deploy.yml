@@ -15,9 +15,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
-          exclude_assets: '.github,node_modules,.gitignore'
+      - name: Push static files to gh-pages branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Copy files we want to publish to a temp folder
+          mkdir /tmp/site
+          cp index.html /tmp/site/
+          cp -r assets /tmp/site/
+
+          # Create or reset the gh-pages branch
+          git fetch origin gh-pages 2>/dev/null || true
+          git checkout --orphan gh-pages-deploy
+          git rm -rf . --quiet
+
+          # Restore the site files
+          cp /tmp/site/index.html .
+          cp -r /tmp/site/assets .
+
+          git add index.html assets/
+          git commit -m "deploy: update GitHub Pages $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push origin gh-pages-deploy:gh-pages --force
