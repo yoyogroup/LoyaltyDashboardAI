@@ -9,19 +9,19 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --orange: #E85C2A;
-      --orange-lt: #FF7A47;
-      --orange-bg: #FFF3EE;
-      --navy: #0F1E35;
-      --navy-mid: #1A3050;
-      --navy-lt: #263D60;
-      --teal: #00B8A9;
-      --teal-lt: #00D4C3;
-      --teal-bg: #E6FAF8;
+      --orange: #FF5732;
+      --orange-lt: #FF7A57;
+      --orange-bg: #FFF2EE;
+      --navy: #1D1D1F;
+      --navy-mid: #2A2A2C;
+      --navy-lt: #3A3A3C;
+      --teal: #699da9;
+      --teal-lt: #88B5C0;
+      --teal-bg: #EEF5F7;
       --slate: #64748B;
       --slate-lt: #94A3B8;
-      --border: #E2E8F0;
-      --bg: #F0F4F8;
+      --border: #E4E4E4;
+      --bg: #F5F5F7;
       --white: #FFFFFF;
       --success: #10B981;
       --danger: #EF4444;
@@ -38,7 +38,7 @@
 
     /* ── SIDEBAR ── */
     .sidebar {
-      width:var(--sw); background:var(--navy); min-height:100vh;
+      width:var(--sw); background:#000000; min-height:100vh;
       position:fixed; left:0; top:0; bottom:0;
       display:flex; flex-direction:column; z-index:50;
     }
@@ -48,12 +48,10 @@
     }
     .logo-mark { display:flex; align-items:center; gap:10px; }
     .logo-icon {
-      width:38px; height:38px; background:var(--orange);
-      border-radius:11px; display:flex; align-items:center; justify-content:center;
-      box-shadow:0 4px 12px rgba(232,92,42,0.4);
+      width:42px; height:30px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
     }
-    .logo-icon svg { width:22px; height:22px; }
-    .logo-text { font-size:22px; font-weight:900; color:white; letter-spacing:-0.5px; }
+    .logo-icon svg { width:42px; height:30px; }
+    .logo-text { font-size:22px; font-weight:900; color:white; letter-spacing:-0.06em; }
     .logo-sub { font-size:10px; color:rgba(255,255,255,0.35); margin-top:4px; letter-spacing:1.5px; text-transform:uppercase; }
     .nav-section { padding:16px 14px; flex:1; }
     .nav-group-label {
@@ -108,7 +106,7 @@
       font-size:11px; font-weight:700; padding:4px 10px;
       border-radius:20px; letter-spacing:0.3px;
     }
-    .page-title { font-size:17px; font-weight:700; color:var(--navy); letter-spacing:-0.3px; }
+    .page-title { font-size:17px; font-weight:700; color:var(--navy); letter-spacing:-0.06em; }
     .topbar-right { display:flex; align-items:center; gap:10px; }
     .period-tabs {
       display:flex; background:var(--bg); border-radius:9px;
@@ -140,7 +138,7 @@
 
     /* ── HERO ── */
     .hero {
-      background:linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 55%, #1B3F6A 100%);
+      background:linear-gradient(135deg, #1D1D1F 0%, #2E4A52 55%, #699da9 100%);
       border-radius:20px; padding:30px 36px; margin-bottom:24px;
       position:relative; overflow:hidden; display:flex; align-items:center; gap:40px;
     }
@@ -152,15 +150,15 @@
     .hero::after {
       content:''; position:absolute; right:40px; top:-30px;
       width:180px; height:180px; border-radius:50%;
-      background:rgba(0,184,169,0.08); border:1px solid rgba(0,184,169,0.12);
+      background:rgba(105,157,169,0.1); border:1px solid rgba(105,157,169,0.15);
     }
     .hero-icon-ring {
       width:64px; height:64px; border-radius:18px; flex-shrink:0;
-      background:rgba(232,92,42,0.2); border:1px solid rgba(232,92,42,0.3);
+      background:rgba(255,87,50,0.18); border:1px solid rgba(255,87,50,0.3);
       display:flex; align-items:center; justify-content:center;
     }
     .hero-text { flex:1; }
-    .hero-text h2 { color:white; font-size:22px; font-weight:800; letter-spacing:-0.5px; margin-bottom:6px; }
+    .hero-text h2 { color:white; font-size:22px; font-weight:800; letter-spacing:-0.06em; margin-bottom:6px; }
     .hero-text p { color:rgba(255,255,255,0.5); font-size:13px; line-height:1.65; max-width:480px; }
     .hero-stats { display:flex; gap:0; flex-shrink:0; position:relative; z-index:1; }
     .hero-stat {
@@ -212,7 +210,7 @@
       font-size:11px; font-weight:600; color:var(--slate);
       text-transform:uppercase; letter-spacing:0.9px; margin-bottom:6px;
     }
-    .kpi-value { font-size:28px; font-weight:900; color:var(--navy); letter-spacing:-1.2px; line-height:1; }
+    .kpi-value { font-size:28px; font-weight:900; color:var(--navy); letter-spacing:-0.06em; line-height:1; }
     .kpi-sub { font-size:11.5px; color:var(--slate-lt); margin-top:8px; }
     .kpi-sub span { color:var(--slate); font-weight:500; }
     .kpi-bar-bg { height:3px; background:var(--bg); border-radius:2px; margin-top:14px; overflow:hidden; }
@@ -366,9 +364,10 @@
   <div class="sidebar-logo">
     <div class="logo-mark">
       <div class="logo-icon">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" fill="white" opacity=".4"/>
-          <circle cx="12" cy="12" r="4" fill="white"/>
+        <svg viewBox="-4 0 56 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Yoyo brandmark: two diagonal band shapes -->
+          <path d="M9,2 L19,2 Q23,2 22,7 L16,27 Q15,32 11,32 L1,32 Q-3,32 -1,27 L5,7 Q6,2 9,2 Z" fill="#FF5732"/>
+          <path d="M27,2 L37,2 Q41,2 40,7 L34,27 Q33,32 29,32 L19,32 Q15,32 17,27 L23,7 Q24,2 27,2 Z" fill="#FF5732"/>
         </svg>
       </div>
       <span class="logo-text">yoyo</span>
@@ -458,7 +457,7 @@
     <div class="hero">
       <div class="hero-icon-ring">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#E85C2A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#FF5732" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
       <div class="hero-text">
@@ -491,7 +490,7 @@
       <div class="kpi-card">
         <div class="kpi-top">
           <div class="kpi-icon o">
-            <svg viewBox="0 0 20 20" fill="#E85C2A"><path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/></svg>
+            <svg viewBox="0 0 20 20" fill="#FF5732"><path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/></svg>
           </div>
           <span class="kpi-trend-chip up" id="rls-chip">▲ 10.2%</span>
         </div>
@@ -505,7 +504,7 @@
       <div class="kpi-card">
         <div class="kpi-top">
           <div class="kpi-icon t">
-            <svg viewBox="0 0 20 20" fill="#00B8A9"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
+            <svg viewBox="0 0 20 20" fill="#699da9"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
           </div>
           <span class="kpi-trend-chip up" id="alc-chip">▲ 10.3%</span>
         </div>
@@ -547,7 +546,7 @@
       <div class="kpi-card">
         <div class="kpi-top">
           <div class="kpi-icon o">
-            <svg viewBox="0 0 20 20" fill="#E85C2A"><path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/></svg>
+            <svg viewBox="0 0 20 20" fill="#FF5732"><path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/></svg>
           </div>
           <span class="kpi-trend-chip up" id="cr-chip">▲ 8.7%</span>
         </div>
@@ -825,7 +824,7 @@
     <div class="insight-row">
       <div class="insight-card">
         <div class="insight-icon o">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="#E85C2A"><path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd"/></svg>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="#FF5732"><path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd"/></svg>
         </div>
         <div class="insight-text">
           <h4>Loyalty members spend 35.7% more</h4>
@@ -834,7 +833,7 @@
       </div>
       <div class="insight-card">
         <div class="insight-icon t">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="#00B8A9"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="#699da9"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
         </div>
         <div class="insight-text">
           <h4>Saturday is your loyalty peak</h4>
@@ -978,10 +977,10 @@ function generateSeries(period) {
 let revenueChart, donutChart, basketChart, freqChart, cashbackChart, hoursChart;
 let currentPeriod = '30D';
 
-const TEAL = '#00B8A9', TEAL_A = 'rgba(0,184,169,0.12)';
+const TEAL = '#699da9', TEAL_A = 'rgba(105,157,169,0.12)';
 const GRAY = '#94A3B8', GRAY_A = 'rgba(148,163,184,0.1)';
-const ORANGE = '#E85C2A', ORANGE_A = 'rgba(232,92,42,0.12)';
-const NAVY = '#0F1E35';
+const ORANGE = '#FF5732', ORANGE_A = 'rgba(255,87,50,0.12)';
+const NAVY = '#1D1D1F';
 
 function gradientFill(ctx, color, h) {
   const g = ctx.createLinearGradient(0, 0, 0, h || 280);
@@ -1029,7 +1028,7 @@ function initCharts(period) {
           label: 'Loyal Revenue',
           data: data.lRev,
           borderColor: TEAL, borderWidth: 2.5, tension: 0.45,
-          fill: true, backgroundColor: hexGrad(rCtx, '#00B8A9', 220),
+          fill: true, backgroundColor: hexGrad(rCtx, '#699da9', 220),
           pointRadius: 0, pointHoverRadius: 5,
           pointBackgroundColor: TEAL, pointBorderColor: '#fff', pointBorderWidth: 2,
         },
@@ -1143,7 +1142,7 @@ function initCharts(period) {
         {
           label:'Earned', data: data.cbE,
           borderColor: ORANGE, borderWidth: 2, tension: 0.45,
-          fill: true, backgroundColor: hexGrad(cbCtx, '#E85C2A', 200),
+          fill: true, backgroundColor: hexGrad(cbCtx, '#FF5732', 200),
           pointRadius: 0, pointHoverRadius: 4,
         },
         {
