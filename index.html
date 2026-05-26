@@ -354,11 +354,18 @@
       display:inline-flex; align-items:center; padding:3px 9px;
       border-radius:20px; font-size:11px; font-weight:600; gap:4px;
     }
-    .pill.green { background:#D1FAE5; color:#065F46; }
-    .pill.amber { background:#FEF3C7; color:#92400E; }
-    .pill.blue { background:#DBEAFE; color:#1E40AF; }
-    .pill.red { background:#FEE2E2; color:#991B1B; }
-    .pill.gray { background:#E5E7EB; color:#374151; }
+    .pill.green  { background:#D1FAE5; color:#065F46; }
+    .pill.amber  { background:#FEF3C7; color:#92400E; }
+    .pill.blue   { background:#DBEAFE; color:#1E40AF; }
+    .pill.red    { background:#FEE2E2; color:#991B1B; }
+    .pill.gray   { background:#E5E7EB; color:#374151; }
+    .pill.violet { background:#EDE9FE; color:#5B21B6; }
+
+    /* Multi-pill segment cell — wraps cleanly when a customer has 2-3 tags */
+    .seg-cell {
+      display:flex; flex-wrap:wrap; gap:5px; align-items:center;
+    }
+    .seg-cell .pill { padding:2px 8px; font-size:10.5px; }
 
     /* ── SEGMENT FILTER CHIPS ── */
     .seg-row {
@@ -385,12 +392,13 @@
       min-width:22px; text-align:center;
     }
     .seg-chip:not(.active) .seg-count { background:rgba(15,30,53,0.06); color:var(--navy); }
-    .seg-dot.vip { background:#10B981; }
+    .seg-dot.vip      { background:#10B981; }
     .seg-dot.active-d { background:#3B82F6; }
-    .seg-dot.growing { background:#F59E0B; }
+    .seg-dot.growing  { background:#F59E0B; }
     .seg-dot.slipping { background:#EF4444; }
-    .seg-dot.churned { background:#9CA3AF; }
-    .seg-dot.all { background:var(--orange); }
+    .seg-dot.churned  { background:#9CA3AF; }
+    .seg-dot.new-d    { background:#8B5CF6; }
+    .seg-dot.all      { background:var(--orange); }
     .seg-empty {
       text-align:center; padding:32px 16px; color:var(--slate);
       font-size:13px;
@@ -946,10 +954,14 @@
         <button class="btn btn-ghost" onclick="showToast('Viewing all customers')">View all</button>
       </div>
 
-      <!-- Segment filter chips -->
+      <!-- Segment filter chips. Customers can carry up to 3 tags
+           (e.g. VIP+Active+New); Slipping & Churned are exclusive. -->
       <div class="seg-row" id="segRow">
         <div class="seg-chip active" data-seg="all">
           <span class="seg-dot all"></span>All<span class="seg-count" data-count="all">0</span>
+        </div>
+        <div class="seg-chip" data-seg="new">
+          <span class="seg-dot new-d"></span>New<span class="seg-count" data-count="new">0</span>
         </div>
         <div class="seg-chip" data-seg="vip">
           <span class="seg-dot vip"></span>VIP<span class="seg-count" data-count="vip">0</span>
@@ -1303,49 +1315,79 @@ function setPeriod(p, btn) {
 // ═══════════════════ CUSTOMER SEGMENTS ═══════════════════
 // Mobile numbers masked POPIA-style: first 3 digits + last 4, middle obfuscated.
 // No names, no full numbers — anonymised analytics only.
+//
+// Each customer carries a `segments` array of 1–3 tags. Examples:
+//   ['vip','active']         — top spender who's also recently active
+//   ['active','growing','new'] — fresh signup gaining momentum
+//   ['slipping']             — Slipping & Churned are EXCLUSIVE — never stacked.
+//
+// `joinedDaysAgo` drives the `new` segment (≤ 30 days since signup).
 const SEGMENT_META = {
-  vip:      { label:'VIP',      pill:'green', dot:'vip',      desc:'R1,000+ spend · 10+ visits' },
-  active:   { label:'Active',   pill:'blue',  dot:'active-d', desc:'Visited in last 30 days' },
-  growing:  { label:'Growing',  pill:'amber', dot:'growing',  desc:'Visit frequency trending up' },
-  slipping: { label:'Slipping', pill:'red',   dot:'slipping', desc:'No visit in 30–60 days' },
-  churned:  { label:'Churned',  pill:'gray',  dot:'churned',  desc:'No visit in 60+ days' },
+  new:      { label:'New',      pill:'violet', dot:'new-d',    desc:'Joined in the last 30 days' },
+  vip:      { label:'VIP',      pill:'green',  dot:'vip',      desc:'R1,000+ spend · 10+ visits' },
+  active:   { label:'Active',   pill:'blue',   dot:'active-d', desc:'Visited in last 30 days' },
+  growing:  { label:'Growing',  pill:'amber',  dot:'growing',  desc:'Visit frequency trending up' },
+  slipping: { label:'Slipping', pill:'red',    dot:'slipping', desc:'No visit in 30–60 days · exclusive tag' },
+  churned:  { label:'Churned',  pill:'gray',   dot:'churned',  desc:'No visit in 60+ days · exclusive tag' },
 };
 
+// Stable visual order when a customer has multiple tags (used in the table cell).
+const SEG_DISPLAY_ORDER = ['vip', 'active', 'growing', 'new', 'slipping', 'churned'];
+
 const CUSTOMERS = [
-  // VIP
-  { mobile:'082 ••• 4421', spend:1247.80, visits:14, basket:89.13, cashback:62.39, lastVisit:'2 days ago',  segment:'vip' },
-  { mobile:'083 ••• 7752', spend:1108.40, visits:12, basket:92.37, cashback:55.42, lastVisit:'1 day ago',   segment:'vip' },
-  { mobile:'071 ••• 0913', spend:1064.50, visits:13, basket:81.88, cashback:53.23, lastVisit:'3 days ago',  segment:'vip' },
-  { mobile:'084 ••• 6608', spend:1018.20, visits:11, basket:92.56, cashback:50.91, lastVisit:'today',       segment:'vip' },
-  // Active
-  { mobile:'072 ••• 1184', spend: 934.20, visits:11, basket:84.93, cashback:46.71, lastVisit:'4 days ago',  segment:'active' },
-  { mobile:'076 ••• 8830', spend: 882.60, visits:10, basket:88.26, cashback:44.13, lastVisit:'5 days ago',  segment:'active' },
-  { mobile:'081 ••• 3367', spend: 814.10, visits: 9, basket:90.46, cashback:40.71, lastVisit:'8 days ago',  segment:'active' },
-  { mobile:'073 ••• 5520', spend: 762.40, visits: 9, basket:84.71, cashback:38.12, lastVisit:'11 days ago', segment:'active' },
-  { mobile:'079 ••• 2244', spend: 698.50, visits: 8, basket:87.31, cashback:34.93, lastVisit:'13 days ago', segment:'active' },
-  // Growing
-  { mobile:'082 ••• 9971', spend: 612.30, visits: 7, basket:87.47, cashback:30.62, lastVisit:'6 days ago',  segment:'growing' },
-  { mobile:'084 ••• 4408', spend: 548.90, visits: 6, basket:91.48, cashback:27.45, lastVisit:'9 days ago',  segment:'growing' },
-  { mobile:'071 ••• 1156', spend: 487.20, visits: 6, basket:81.20, cashback:24.36, lastVisit:'12 days ago', segment:'growing' },
-  { mobile:'083 ••• 7783', spend: 432.60, visits: 5, basket:86.52, cashback:21.63, lastVisit:'15 days ago', segment:'growing' },
-  // Slipping
-  { mobile:'076 ••• 2294', spend: 378.40, visits: 5, basket:75.68, cashback:18.92, lastVisit:'38 days ago', segment:'slipping' },
-  { mobile:'072 ••• 6651', spend: 341.10, visits: 4, basket:85.28, cashback:17.06, lastVisit:'44 days ago', segment:'slipping' },
-  { mobile:'081 ••• 0098', spend: 298.70, visits: 4, basket:74.68, cashback:14.94, lastVisit:'51 days ago', segment:'slipping' },
-  // Churned
-  { mobile:'079 ••• 8814', spend: 247.30, visits: 3, basket:82.43, cashback:12.37, lastVisit:'72 days ago', segment:'churned' },
-  { mobile:'073 ••• 3370', spend: 198.40, visits: 3, basket:66.13, cashback: 9.92, lastVisit:'89 days ago', segment:'churned' },
-  { mobile:'084 ••• 5527', spend: 174.80, visits: 2, basket:87.40, cashback: 8.74, lastVisit:'104 days ago',segment:'churned' },
+  // ── VIP (all also Active; some also New) ────────────────────────────
+  { mobile:'082 ••• 4421', spend:1247.80, visits:14, basket:89.13, cashback:62.39, lastVisit:'2 days ago',  joinedDaysAgo:184, segments:['vip','active'] },
+  { mobile:'083 ••• 7752', spend:1108.40, visits:12, basket:92.37, cashback:55.42, lastVisit:'1 day ago',   joinedDaysAgo:212, segments:['vip','active'] },
+  { mobile:'071 ••• 0913', spend:1064.50, visits:13, basket:81.88, cashback:53.23, lastVisit:'3 days ago',  joinedDaysAgo:147, segments:['vip','active'] },
+  { mobile:'084 ••• 6608', spend:1018.20, visits:11, basket:92.56, cashback:50.91, lastVisit:'today',       joinedDaysAgo: 22, segments:['vip','active','new'] },
+  // ── Active + Growing/New overlaps ───────────────────────────────────
+  { mobile:'072 ••• 1184', spend: 934.20, visits:11, basket:84.93, cashback:46.71, lastVisit:'4 days ago',  joinedDaysAgo:158, segments:['active','growing'] },
+  { mobile:'076 ••• 8830', spend: 882.60, visits:10, basket:88.26, cashback:44.13, lastVisit:'5 days ago',  joinedDaysAgo:201, segments:['active'] },
+  { mobile:'081 ••• 3367', spend: 814.10, visits: 9, basket:90.46, cashback:40.71, lastVisit:'8 days ago',  joinedDaysAgo: 96, segments:['active','growing'] },
+  { mobile:'073 ••• 5520', spend: 762.40, visits: 9, basket:84.71, cashback:38.12, lastVisit:'11 days ago', joinedDaysAgo:134, segments:['active'] },
+  { mobile:'079 ••• 2244', spend: 698.50, visits: 8, basket:87.31, cashback:34.93, lastVisit:'13 days ago', joinedDaysAgo: 19, segments:['active','new'] },
+  // ── Growing (often Active and/or New) ───────────────────────────────
+  { mobile:'082 ••• 9971', spend: 612.30, visits: 7, basket:87.47, cashback:30.62, lastVisit:'6 days ago',  joinedDaysAgo: 14, segments:['active','growing','new'] },
+  { mobile:'084 ••• 4408', spend: 548.90, visits: 6, basket:91.48, cashback:27.45, lastVisit:'9 days ago',  joinedDaysAgo: 11, segments:['growing','new'] },
+  { mobile:'071 ••• 1156', spend: 487.20, visits: 6, basket:81.20, cashback:24.36, lastVisit:'12 days ago', joinedDaysAgo: 89, segments:['active','growing'] },
+  { mobile:'083 ••• 7783', spend: 432.60, visits: 5, basket:86.52, cashback:21.63, lastVisit:'15 days ago', joinedDaysAgo:  8, segments:['growing','new'] },
+  // ── Pure New (fresh, building habit) ────────────────────────────────
+  { mobile:'072 ••• 5588', spend: 234.50, visits: 3, basket:78.17, cashback:11.73, lastVisit:'today',       joinedDaysAgo:  4, segments:['active','new'] },
+  { mobile:'084 ••• 1102', spend: 187.30, visits: 2, basket:93.65, cashback: 9.37, lastVisit:'2 days ago',  joinedDaysAgo:  6, segments:['active','new'] },
+  { mobile:'071 ••• 9924', spend: 156.80, visits: 2, basket:78.40, cashback: 7.84, lastVisit:'4 days ago',  joinedDaysAgo:  9, segments:['active','new'] },
+  // ── Slipping (EXCLUSIVE tag) ────────────────────────────────────────
+  { mobile:'076 ••• 2294', spend: 378.40, visits: 5, basket:75.68, cashback:18.92, lastVisit:'38 days ago', joinedDaysAgo:241, segments:['slipping'] },
+  { mobile:'072 ••• 6651', spend: 341.10, visits: 4, basket:85.28, cashback:17.06, lastVisit:'44 days ago', joinedDaysAgo:298, segments:['slipping'] },
+  { mobile:'081 ••• 0098', spend: 298.70, visits: 4, basket:74.68, cashback:14.94, lastVisit:'51 days ago', joinedDaysAgo:175, segments:['slipping'] },
+  // ── Churned (EXCLUSIVE tag) ─────────────────────────────────────────
+  { mobile:'079 ••• 8814', spend: 247.30, visits: 3, basket:82.43, cashback:12.37, lastVisit:'72 days ago', joinedDaysAgo:312, segments:['churned'] },
+  { mobile:'073 ••• 3370', spend: 198.40, visits: 3, basket:66.13, cashback: 9.92, lastVisit:'89 days ago', joinedDaysAgo:401, segments:['churned'] },
+  { mobile:'084 ••• 5527', spend: 174.80, visits: 2, basket:87.40, cashback: 8.74, lastVisit:'104 days ago',joinedDaysAgo:267, segments:['churned'] },
 ];
 
 function fmtR(n) { return 'R' + n.toLocaleString('en-ZA', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
+
+// Returns true if `c` carries the given segment tag.
+function inSegment(c, seg) {
+  return Array.isArray(c.segments) && c.segments.includes(seg);
+}
+
+// Choose an avatar style class based on the customer's primary tag.
+// Order of preference: vip → churned → everything else.
+function avatarClassFor(c) {
+  if (inSegment(c, 'vip')) return 'o';        // orange — top tier
+  if (inSegment(c, 'churned')) return 'n';    // neutral grey
+  return 't';                                  // teal — default
+}
 
 function renderCustomers(seg) {
   const tbody = document.getElementById('custTbody');
   if (!tbody) return;
   tbody.replaceChildren(); // safe clear
 
-  const filtered = seg === 'all' ? CUSTOMERS : CUSTOMERS.filter(c => c.segment === seg);
+  const filtered = seg === 'all'
+    ? CUSTOMERS.slice()
+    : CUSTOMERS.filter(c => inSegment(c, seg));
   filtered.sort((a, b) => b.spend - a.spend);
 
   if (filtered.length === 0) {
@@ -1361,13 +1403,12 @@ function renderCustomers(seg) {
 
   // Use DOM APIs (textContent), not innerHTML — XSS-safe per Yoyo guardrails
   for (const c of filtered) {
-    const meta = SEGMENT_META[c.segment];
     const tr = document.createElement('tr');
 
     // Mobile cell — avatar from last 2 digits of unmasked tail
     const tdMobile = document.createElement('td');
     const av = document.createElement('span');
-    av.className = 'cust-av ' + (c.segment === 'vip' ? 'o' : c.segment === 'churned' ? 'n' : 't');
+    av.className = 'cust-av ' + avatarClassFor(c);
     const tail = c.mobile.slice(-2);
     av.textContent = tail;
     tdMobile.appendChild(av);
@@ -1403,21 +1444,37 @@ function renderCustomers(seg) {
     tdL.style.fontSize = '12.5px';
     tr.appendChild(tdL);
 
-    // Segment pill
+    // Segment pills — one customer can carry 1–3 tags. Render them in a
+    // stable order so the visual hierarchy doesn't shuffle per row.
     const tdSeg = document.createElement('td');
-    const pill = document.createElement('span');
-    pill.className = 'pill ' + meta.pill;
-    pill.textContent = '● ' + meta.label;
-    tdSeg.appendChild(pill);
+    const wrap = document.createElement('div');
+    wrap.className = 'seg-cell';
+    const ordered = SEG_DISPLAY_ORDER.filter(s => inSegment(c, s));
+    for (const s of ordered) {
+      const meta = SEGMENT_META[s];
+      if (!meta) continue;
+      const pill = document.createElement('span');
+      pill.className = 'pill ' + meta.pill;
+      pill.textContent = '● ' + meta.label;
+      wrap.appendChild(pill);
+    }
+    tdSeg.appendChild(wrap);
     tr.appendChild(tdSeg);
 
     tbody.appendChild(tr);
   }
 }
 
+// Counts use INCLUSION — a VIP+Active+New customer counts once in each of
+// those three chips. The "All" chip is the de-duplicated total.
 function updateSegmentCounts() {
-  const counts = { all: CUSTOMERS.length, vip:0, active:0, growing:0, slipping:0, churned:0 };
-  for (const c of CUSTOMERS) counts[c.segment]++;
+  const counts = { all: CUSTOMERS.length, new:0, vip:0, active:0, growing:0, slipping:0, churned:0 };
+  for (const c of CUSTOMERS) {
+    if (!Array.isArray(c.segments)) continue;
+    for (const s of c.segments) {
+      if (s in counts) counts[s]++;
+    }
+  }
   document.querySelectorAll('.seg-count').forEach(el => {
     const k = el.getAttribute('data-count');
     el.textContent = String(counts[k] || 0);
