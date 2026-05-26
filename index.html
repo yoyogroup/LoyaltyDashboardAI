@@ -862,18 +862,12 @@
         <div class="stat-compare-lift" id="basketLift">+—%</div>
       </div>
 
-      <!-- ── Visit Frequency — single stat, has its OWN period selector ── -->
+      <!-- ── Visit Frequency — single stat, follows top page period ── -->
       <div class="chart-card">
         <div class="chart-header">
           <div>
             <div class="chart-title">Visit Frequency</div>
             <div class="chart-sub" id="freqSub">Avg visits per customer · last 30 days</div>
-          </div>
-          <div class="period-tabs" id="freqPeriodTabs" role="tablist" aria-label="Frequency period">
-            <button class="period-tab" data-freq="7D"  onclick="setFreqPeriod('7D',this)">7D</button>
-            <button class="period-tab active" data-freq="30D" onclick="setFreqPeriod('30D',this)">30D</button>
-            <button class="period-tab" data-freq="90D" onclick="setFreqPeriod('90D',this)">90D</button>
-            <button class="period-tab" data-freq="12M" onclick="setFreqPeriod('12M',this)">12M</button>
           </div>
         </div>
         <div class="stat-compare" id="freqStat">
@@ -1122,7 +1116,6 @@ function generateSeries(period) {
 // ═══════════════════ CHART INSTANCES ═══════════════════
 let revenueChart, donutChart, cashbackChart, hoursChart;
 let currentPeriod = '30D';
-let currentFreqPeriod = '30D'; // Visit Frequency card has its OWN period state
 
 // ── Stat comparisons (Basket / Frequency) — period-keyed dummy data ──
 // Keys match the page period tabs and the in-card frequency tabs.
@@ -1179,13 +1172,6 @@ function renderFreqStat(period) {
   if (subEl) subEl.textContent = 'Avg visits per customer · ' + (PERIOD_LABELS[period] || period);
 }
 
-// Called by the in-card period buttons on the Frequency card.
-function setFreqPeriod(p, btn) {
-  currentFreqPeriod = p;
-  document.querySelectorAll('#freqPeriodTabs .period-tab').forEach(t => t.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  renderFreqStat(p);
-}
 
 const TEAL = '#699da9', TEAL_A = 'rgba(105,157,169,0.12)';
 const GRAY = '#94A3B8', GRAY_A = 'rgba(148,163,184,0.1)';
@@ -1294,10 +1280,9 @@ function initCharts(period) {
   });
 
   // ── Basket + Frequency: single-stat comparisons (not charts) ──
-  // Basket follows the top-page period (`currentPeriod`).
-  // Frequency has its own period state (`currentFreqPeriod`).
+  // Both follow the top-page period (`currentPeriod`).
   renderBasketStat(currentPeriod);
-  renderFreqStat(currentFreqPeriod);
+  renderFreqStat(currentPeriod);
 
   // ── Cashback Chart ──
   const cbCtx = document.getElementById('cashbackChart').getContext('2d');
