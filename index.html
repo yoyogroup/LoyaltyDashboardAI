@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Yoyo – Loyalty Performance Insights</title>
   <!-- Security: CSP restricts scripts/styles to known safe origins only -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.execute-api.eu-west-1.amazonaws.com; frame-ancestors 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.execute-api.eu-west-1.amazonaws.com https://sms-service.int.za.platform.yoyogroup.com; frame-ancestors 'none';">
   <meta http-equiv="X-Frame-Options" content="DENY">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <!-- Prevent search engine indexing of this merchant portal -->
@@ -126,6 +126,31 @@
     }
     .page-title { font-size:14px; font-weight:600; color:var(--slate); letter-spacing:-0.02em; }
     .topbar-right { display:flex; align-items:center; gap:10px; }
+
+    /* ── STORE SELECTOR ── */
+    .store-select { position:relative; }
+    .store-select-btn {
+      display:flex; align-items:center; gap:8px; padding:7px 12px;
+      background:var(--bg); border:1px solid var(--border); border-radius:9px;
+      font-size:12.5px; font-weight:600; color:var(--navy); cursor:pointer; font-family:inherit;
+    }
+    .store-select-btn:hover { background:white; border-color:var(--slate-lt); }
+    .store-select-btn svg { width:14px; height:14px; opacity:0.7; flex-shrink:0; }
+    .store-select-btn .chev { width:13px; height:13px; }
+    .store-select-menu {
+      position:absolute; top:calc(100% + 6px); right:0; z-index:60;
+      background:white; border:1px solid var(--border); border-radius:11px;
+      box-shadow:0 8px 28px rgba(15,30,53,0.14); padding:6px; min-width:230px;
+    }
+    .store-select-opt {
+      display:flex; align-items:center; gap:8px; width:100%; text-align:left;
+      padding:9px 11px; border:none; background:none; border-radius:8px;
+      font-size:13px; font-weight:500; color:var(--navy); cursor:pointer; font-family:inherit;
+    }
+    .store-select-opt:hover { background:var(--bg); }
+    .store-select-opt.active { background:var(--orange-bg); color:var(--orange); font-weight:700; }
+    .store-select-opt .tick { margin-left:auto; opacity:0; flex-shrink:0; }
+    .store-select-opt.active .tick { opacity:1; }
 
     /* ── USER IDENTITY PILL (signed-in email + logout) ── */
     .user-pill {
@@ -802,6 +827,25 @@
       <h1 class="page-title">Loyalty Performance Insights</h1>
     </div>
     <div class="topbar-right">
+      <!-- Store selector — scopes all insights to one store or all stores -->
+      <div class="store-select" id="storeSelect">
+        <button class="store-select-btn" onclick="toggleStoreMenu(event)">
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clip-rule="evenodd"/></svg>
+          <span id="storeSelectLabel">Store 1 · Sea Point</span>
+          <svg class="chev" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </button>
+        <div class="store-select-menu" id="storeSelectMenu" hidden>
+          <button class="store-select-opt" data-store="all" onclick="selectStore('all')">All Stores
+            <svg class="tick" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          </button>
+          <button class="store-select-opt active" data-store="s1" onclick="selectStore('s1')">Store 1 · Sea Point
+            <svg class="tick" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          </button>
+          <button class="store-select-opt" data-store="s2" onclick="selectStore('s2')">Store 2 · Claremont
+            <svg class="tick" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+      </div>
       <div class="period-tabs" id="periodTabs">
         <button class="period-tab" data-period="7D" onclick="setPeriod('7D',this)">7D</button>
         <button class="period-tab active" data-period="30D" onclick="setPeriod('30D',this)">30D</button>
@@ -844,7 +888,7 @@
         <p>Customers tap their bank card to auto-earn loyalty. Balances accumulate on their WhatsApp loyalty pass — zero friction, zero app download.</p>
         <div class="hero-whatsapp">
           <div class="wa-dot"></div>
-          <span class="wa-text">WhatsApp Loyalty Pass · 247 active members</span>
+          <span class="wa-text">WhatsApp Loyalty Pass · <span id="heroMemberCount">247</span> active members</span>
         </div>
       </div>
       <div class="hero-stats" id="heroStats">
@@ -1605,6 +1649,15 @@ const chartDefaults = {
 function initCharts(period) {
   const data = generateSeries(period);
 
+  // Scale all magnitude series by the selected store's share of the business.
+  // (Ratios — share %, basket, frequency — are store-agnostic and not scaled.)
+  const f = storeFactor();
+  if (f !== 1) {
+    ['lRev','nRev','lCnt','nCnt','cbE','cbR'].forEach(key => {
+      if (Array.isArray(data[key])) data[key] = data[key].map(v => Math.round(v * f));
+    });
+  }
+
   // ── Revenue Chart ──
   const rCtx = document.getElementById('revenueChart').getContext('2d');
   if (revenueChart) revenueChart.destroy();
@@ -1748,26 +1801,71 @@ const KPI_DATA = {
   '12M': { rlsV:'R183,450', rlsP:'R141,820', rlsC:'▲ 29.3%', alcV:'247', alcP:'112', alcC:'▲ 120.5%', nlcV:'247', nlcP:'112', nlcC:'▲ 120.5%', ceV:'R9,172', ceP:'R7,091', ceC:'▲ 29.3%', crV:'R4,421', crP:'R3,280', crC:'▲ 34.8%', lsV:'44.8%', lsP:'33.2%', lsC:'▲ 11.6pp' },
 };
 
+// Scale a pre-formatted KPI string by a store factor.
+// Rand amounts + plain counts scale; percentages / 'pp' (ratios) do not.
+function scaleKpiString(str, factor) {
+  if (typeof str !== 'string') return str;
+  if (str.includes('%') || str.includes('pp')) return str; // ratio — leave as-is
+  const isRand = str.trim().startsWith('R');
+  const num = parseFloat(str.replace(/[^0-9.]/g, ''));
+  if (isNaN(num)) return str;
+  const scaled = Math.round(num * factor);
+  return (isRand ? 'R' : '') + scaled.toLocaleString('en-ZA');
+}
+
 function updateKPIs(data, period) {
   const k = KPI_DATA[period];
-  document.getElementById('rls-val').textContent = k.rlsV;
-  document.getElementById('rls-prev').textContent = k.rlsP;
+  const f = storeFactor();
+  // Magnitude KPIs scale by store; chips (% change) stay as ratios.
+  document.getElementById('rls-val').textContent = scaleKpiString(k.rlsV, f);
+  document.getElementById('rls-prev').textContent = scaleKpiString(k.rlsP, f);
   document.getElementById('rls-chip').textContent = k.rlsC;
-  document.getElementById('alc-val').textContent = k.alcV;
-  document.getElementById('alc-prev').textContent = k.alcP;
+  document.getElementById('alc-val').textContent = scaleKpiString(k.alcV, f);
+  document.getElementById('alc-prev').textContent = scaleKpiString(k.alcP, f);
   document.getElementById('alc-chip').textContent = k.alcC;
-  document.getElementById('nlc-val').textContent = k.nlcV;
-  document.getElementById('nlc-prev').textContent = k.nlcP;
+  document.getElementById('nlc-val').textContent = scaleKpiString(k.nlcV, f);
+  document.getElementById('nlc-prev').textContent = scaleKpiString(k.nlcP, f);
   document.getElementById('nlc-chip').textContent = k.nlcC;
-  document.getElementById('ce-val').textContent = k.ceV;
-  document.getElementById('ce-prev').textContent = k.ceP;
+  document.getElementById('ce-val').textContent = scaleKpiString(k.ceV, f);
+  document.getElementById('ce-prev').textContent = scaleKpiString(k.ceP, f);
   document.getElementById('ce-chip').textContent = k.ceC;
-  document.getElementById('cr-val').textContent = k.crV;
-  document.getElementById('cr-prev').textContent = k.crP;
+  document.getElementById('cr-val').textContent = scaleKpiString(k.crV, f);
+  document.getElementById('cr-prev').textContent = scaleKpiString(k.crP, f);
   document.getElementById('cr-chip').textContent = k.crC;
-  document.getElementById('ls-val').textContent = k.lsV;
+  document.getElementById('ls-val').textContent = k.lsV;   // share % — ratio
   document.getElementById('ls-prev').textContent = k.lsP;
   document.getElementById('ls-chip').textContent = k.lsC;
+  // Hero active-member count mirrors the Active Loyalty KPI.
+  const heroCount = document.getElementById('heroMemberCount');
+  if (heroCount) heroCount.textContent = scaleKpiString(k.alcV, f);
+}
+
+// ═══════════════════ STORE SELECTOR ═══════════════════
+// Each store has a share of total business. "All Stores" = the full figures;
+// a single store shows its scaled portion. Ratios (share %, basket, frequency)
+// are store-agnostic and never scaled.
+const STORES = {
+  all: { label: 'All Stores',          factor: 1.00 },
+  s1:  { label: 'Store 1 · Sea Point',  factor: 0.58 },
+  s2:  { label: 'Store 2 · Claremont',  factor: 0.42 },
+};
+let currentStore = 's1'; // default to the store you're on
+function storeFactor() { return (STORES[currentStore] || STORES.all).factor; }
+
+function toggleStoreMenu(e) {
+  if (e) e.stopPropagation();
+  const m = document.getElementById('storeSelectMenu');
+  m.hidden = !m.hidden;
+}
+function selectStore(id) {
+  if (!STORES[id]) return;
+  currentStore = id;
+  document.getElementById('storeSelectLabel').textContent = STORES[id].label;
+  document.querySelectorAll('.store-select-opt').forEach(o =>
+    o.classList.toggle('active', o.getAttribute('data-store') === id));
+  document.getElementById('storeSelectMenu').hidden = true;
+  initCharts(currentPeriod); // re-render everything with the new store factor
+  showToast('Viewing · ' + STORES[id].label);
 }
 
 // ═══════════════════ PERIOD SWITCH ═══════════════════
@@ -2063,6 +2161,13 @@ function initSegmentFilter() {
   document.getElementById('segEditBackdrop').addEventListener('click', closeSegmentEditor);
   document.getElementById('campaignBackdrop').addEventListener('click', closeCampaignModal);
   document.getElementById('coverBackdrop').addEventListener('click', closeCoverCatalogue);
+
+  // Close the store-selector menu when clicking outside it.
+  document.addEventListener('click', e => {
+    const sel = document.getElementById('storeSelect');
+    const menu = document.getElementById('storeSelectMenu');
+    if (sel && menu && !menu.hidden && !sel.contains(e.target)) menu.hidden = true;
+  });
 }
 
 // ═══════════════════ SEGMENT EDIT MODAL ═══════════════════
@@ -2781,7 +2886,7 @@ function renderCampStep3() {
     ),
     el('div', { class:'seg-edit-actions' },
       el('button', { class:'btn btn-ghost', onClick: () => renderCampaignStep(2) }, 'Back'),
-      el('button', { class:'btn btn-orange', onClick: () => renderCampaignStep(4) }, 'Send now')
+      el('button', { class:'btn btn-orange', onClick: sendCampaignNow }, 'Send now')
     )
   );
 }
@@ -2822,6 +2927,36 @@ function renderCampStep4() {
       el('button', { class:'btn btn-primary', onClick: closeCampaignModal }, 'Back to dashboard')
     )
   );
+}
+
+// ═══════════════════ SMS SEND (campaign dispatch) ═══════════════════
+// On "Send now" we fire a real SMS via Yoyo's integration service so you can
+// see exactly what a customer receives. For now the recipient is hardcoded to
+// the test mobile, and we always send the campaign's WhatsApp message text.
+//
+// NOTE (security/guardrails): the apiKey is exposed client-side here for
+// testing only. Before go-live this call should move to the AWS backend so
+// the key never reaches the browser, and to avoid browser CORS limits.
+const SMS_ENDPOINT = 'https://sms-service.int.za.platform.yoyogroup.com/api/smsservice/sms';
+const SMS_API_KEY = 'tristan_drum';
+const SMS_TEST_MOBILE = '+27828888797'; // hardcoded test recipient (0828888797)
+
+function sendCampaignNow() {
+  // Advance to the success screen straight away — don't block on the network.
+  renderCampaignStep(4);
+
+  const ref = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
+  fetch(SMS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apiKey': SMS_API_KEY },
+    body: JSON.stringify({
+      mobile: SMS_TEST_MOBILE,
+      text: _campMessage,
+      reference: ref,
+    }),
+  })
+    .then(r => { if (!r.ok) console.warn('[SMS] service returned status', r.status); })
+    .catch(err => console.warn('[SMS] send failed (likely CORS or internal-network only):', err));
 }
 
 // ═══════════════════ VIEW SWITCHING ═══════════════════
