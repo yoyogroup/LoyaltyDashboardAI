@@ -963,21 +963,13 @@
         <p>Customers tap their bank card to auto-earn loyalty. Balances accumulate on their WhatsApp loyalty pass — zero friction, zero app download.</p>
         <div class="hero-whatsapp">
           <div class="wa-dot"></div>
-          <span class="wa-text">WhatsApp Loyalty Pass · <span id="heroMemberCount">247</span> active members</span>
+          <span class="wa-text">WhatsApp Loyalty Pass · Live</span>
         </div>
       </div>
       <div class="hero-stats" id="heroStats">
         <div class="hero-stat">
-          <div class="hero-stat-val accent" id="heroShare">42%</div>
-          <div class="hero-stat-label">Share of<br>Checkout</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-val" id="heroBasketLift">+36%</div>
-          <div class="hero-stat-label">Basket<br>Lift</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-val accent" id="heroFreqLift">+133%</div>
-          <div class="hero-stat-label" id="heroFreqLabel">Frequency<br>Lift</div>
+          <div class="hero-stat-val accent" id="heroMemberCount">247</div>
+          <div class="hero-stat-label">Active Loyalty<br>Members</div>
         </div>
       </div>
     </div>
@@ -2017,12 +2009,7 @@ function applyMerchantBranding() {
   if (md.profile) {
     setText('.store-pill .store-info .sub', md.profile.storeCount + ' stores · Active');
   }
-  if (md.hero) {
-    setText('#heroShare', md.hero.share);
-    setText('#heroBasketLift', md.hero.basketLift);
-    setText('#heroFreqLift', md.hero.avgVisits);
-    setText('#heroFreqLabel', 'Avg Visits');
-  }
+  // Hero now shows a single stat (active members), populated by updateKPIs.
   renderProfileStores();
 }
 
