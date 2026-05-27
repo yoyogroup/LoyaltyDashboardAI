@@ -730,6 +730,28 @@
       padding:3px 9px; border-radius:12px; white-space:nowrap;
     }
 
+    /* ── CUSTOMER DETAIL (clickable rows + modal) ── */
+    #custTbody tr { cursor:pointer; transition:background 0.12s; }
+    #custTbody tr:hover { background:var(--bg); }
+    .cust-detail-head { display:flex; align-items:center; gap:13px; margin-bottom:20px; }
+    .cust-detail-head .cust-av { width:46px; height:46px; font-size:15px; margin-right:0; }
+    .cust-detail-mobile { font-size:18px; font-weight:800; color:var(--navy); letter-spacing:-0.01em; }
+    .cust-detail-pills { display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
+    .cust-stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:22px; }
+    .cust-stat { background:var(--bg); border-radius:11px; padding:13px 14px; }
+    .cust-stat .v { font-size:18px; font-weight:800; color:var(--navy); letter-spacing:-0.02em; }
+    .cust-stat .l { font-size:11px; color:var(--slate); margin-top:3px; font-weight:600; }
+    .cust-insights { list-style:none; }
+    .cust-insight {
+      display:flex; gap:9px; align-items:flex-start; padding:9px 0;
+      border-bottom:1px solid var(--border); font-size:13px; color:var(--navy); line-height:1.45;
+    }
+    .cust-insight:last-child { border-bottom:none; }
+    .cust-insight::before {
+      content:''; width:6px; height:6px; border-radius:50%; background:var(--orange);
+      margin-top:6px; flex-shrink:0;
+    }
+
     /* ── SCROLLBAR ── */
     ::-webkit-scrollbar { width:5px; }
     ::-webkit-scrollbar-track { background:transparent; }
@@ -776,8 +798,8 @@
       <span class="nav-badge">Live</span>
     </button>
     <button class="nav-item" onclick="switchView('profiles', this)">
-      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
-      Customer Profiles
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+      My Profile
     </button>
     <button class="nav-item" onclick="showToast('Coming soon')">
       <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm2.5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6.207.293a1 1 0 00-1.414 0l-6 6a1 1 0 101.414 1.414l6-6a1 1 0 000-1.414zM12.5 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" clip-rule="evenodd"/></svg>
@@ -1479,6 +1501,23 @@
   </div>
 </div>
 
+<!-- ── Customer Detail Modal (opens when a customer row is clicked) ── -->
+<div id="customerBackdrop" class="modal-backdrop" hidden role="presentation">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="customerTitle" onclick="event.stopPropagation()">
+    <header>
+      <h2 id="customerTitle">Customer</h2>
+      <button class="modal-close" aria-label="Close" onclick="closeCustomerDetail()">Close ✕</button>
+    </header>
+    <div class="modal-body" id="customerBody"></div>
+    <footer>
+      <div class="seg-edit-preview">Click any customer in the table to view their profile</div>
+      <div class="seg-edit-actions">
+        <button class="btn btn-primary" onclick="closeCustomerDetail()">Back to customers</button>
+      </div>
+    </footer>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast" style="
   position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);
@@ -2040,6 +2079,8 @@ function renderCustomers(seg) {
   // Use DOM APIs (textContent), not innerHTML — XSS-safe per Yoyo guardrails
   for (const c of filtered) {
     const tr = document.createElement('tr');
+    // Whole row is clickable → opens the customer's detail view.
+    tr.addEventListener('click', () => openCustomerDetail(c));
 
     // Mobile cell — avatar from last 2 digits of unmasked tail
     const tdMobile = document.createElement('td');
@@ -2140,10 +2181,12 @@ function initSegmentFilter() {
     if (!document.getElementById('segEditBackdrop').hidden) closeSegmentEditor();
     if (!document.getElementById('campaignBackdrop').hidden) closeCampaignModal();
     if (!document.getElementById('coverBackdrop').hidden) closeCoverCatalogue();
+    if (!document.getElementById('customerBackdrop').hidden) closeCustomerDetail();
   });
   document.getElementById('segEditBackdrop').addEventListener('click', closeSegmentEditor);
   document.getElementById('campaignBackdrop').addEventListener('click', closeCampaignModal);
   document.getElementById('coverBackdrop').addEventListener('click', closeCoverCatalogue);
+  document.getElementById('customerBackdrop').addEventListener('click', closeCustomerDetail);
 
   // Close the store-selector menu when clicking outside it.
   document.addEventListener('click', e => {
@@ -2910,6 +2953,79 @@ function renderCampStep4() {
       el('button', { class:'btn btn-primary', onClick: closeCampaignModal }, 'Back to dashboard')
     )
   );
+}
+
+// ═══════════════════ CUSTOMER DETAIL ═══════════════════
+function joinDate(daysAgo) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function memberFor(daysAgo) {
+  if (daysAgo < 31) return daysAgo + ' day' + (daysAgo === 1 ? '' : 's');
+  const months = Math.round(daysAgo / 30);
+  if (months < 12) return months + ' month' + (months === 1 ? '' : 's');
+  return (daysAgo / 365).toFixed(1) + ' years';
+}
+function customerInsights(c) {
+  const out = [];
+  out.push('Member for ' + memberFor(c.joinedDaysAgo) + ' · joined ' + joinDate(c.joinedDaysAgo));
+  if (c._spendRank) out.push('Ranked #' + c._spendRank + ' of ' + CUSTOMERS.length + ' loyalty customers by total spend');
+  const avg = CUSTOMERS.reduce((a, b) => a + b.spend, 0) / CUSTOMERS.length;
+  const diff = Math.round((c.spend - avg) / avg * 100);
+  out.push('Spends ' + Math.abs(diff) + '% ' + (diff >= 0 ? 'more' : 'less') +
+    ' than the average member (R' + avg.toFixed(0) + ')');
+  if (inSegment(c, 'vip')) out.push('One of your most valuable customers — worth protecting with VIP treatment');
+  if (inSegment(c, 'new')) out.push('New member — the next few visits decide whether the habit sticks');
+  if (inSegment(c, 'growing')) out.push('Building momentum — a tier-up boost could push them toward VIP');
+  if (inSegment(c, 'slipping')) out.push('At risk — last shopped ' + c.lastVisit + '. A win-back nudge could re-engage them');
+  if (inSegment(c, 'churned')) out.push('Churned — gone quiet for a while. Needs a strong comeback offer');
+  out.push('Earned ' + fmtR(c.cashback) + ' in loyalty cashback to date');
+  return out;
+}
+
+function openCustomerDetail(c) {
+  const body = document.getElementById('customerBody');
+  body.replaceChildren();
+
+  // Header — avatar, masked mobile, segment pills
+  const headText = el('div', {},
+    el('div', { class:'cust-detail-mobile', text: c.mobile }),
+    el('div', { class:'cust-detail-pills' },
+      ...SEG_DISPLAY_ORDER.filter(s => inSegment(c, s)).map(s =>
+        el('span', { class:'pill ' + SEGMENT_META[s].pill, text: '● ' + SEGMENT_META[s].label }))
+    )
+  );
+  const av = el('span', { class:'cust-av ' + avatarClassFor(c), text: c.mobile.slice(-2) });
+  body.appendChild(el('div', { class:'cust-detail-head' }, av, headText));
+
+  // Stat grid
+  const stats = [
+    [fmtR(c.spend), 'Total spend'],
+    [String(c.visits), 'Visits'],
+    [fmtR(c.basket), 'Avg basket'],
+    [fmtR(c.cashback), 'Cashback earned'],
+    [c.lastVisit, 'Last visit'],
+    [joinDate(c.joinedDaysAgo), 'Joined'],
+  ];
+  const grid = el('div', { class:'cust-stat-grid' });
+  for (const [v, l] of stats) {
+    grid.appendChild(el('div', { class:'cust-stat' },
+      el('div', { class:'v', text: v }), el('div', { class:'l', text: l })));
+  }
+  body.appendChild(grid);
+
+  // Insights
+  body.appendChild(el('div', { class:'campaign-section-label', text:'Insights' }));
+  const ul = el('ul', { class:'cust-insights' });
+  for (const ins of customerInsights(c)) ul.appendChild(el('li', { class:'cust-insight', text: ins }));
+  body.appendChild(ul);
+
+  document.getElementById('customerTitle').textContent = 'Customer · ' + c.mobile;
+  document.getElementById('customerBackdrop').hidden = false;
+}
+function closeCustomerDetail() {
+  document.getElementById('customerBackdrop').hidden = true;
 }
 
 // ═══════════════════ SMS SEND (campaign dispatch) ═══════════════════
