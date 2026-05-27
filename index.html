@@ -627,6 +627,84 @@
     .insight-text h4 { font-size:13px; font-weight:700; color:var(--navy); margin-bottom:4px; }
     .insight-text p { font-size:12px; color:var(--slate); line-height:1.55; }
 
+    /* ── CUSTOMER PROFILE VIEW ── */
+    .profile-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .profile-grid .seg-field { margin-bottom:0; }
+    @media (max-width:720px) { .profile-grid { grid-template-columns:1fr; } }
+
+    /* Cover banner (the live preview shown to the merchant) */
+    .cover-banner {
+      position:relative; border-radius:14px; overflow:hidden;
+      aspect-ratio:3 / 1; min-height:160px;
+      display:flex; flex-direction:column; justify-content:flex-end;
+      padding:22px; color:white;
+      background-size:cover; background-position:center;
+      background-image:linear-gradient(135deg,#6F4E37 0%,#A9774E 55%,#D8B48C 100%);
+    }
+    .cover-banner::after {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.42));
+    }
+    .cover-banner-cat {
+      position:relative; z-index:1; font-size:11px; font-weight:700;
+      text-transform:uppercase; letter-spacing:1.4px; opacity:0.92;
+    }
+    .cover-banner-name {
+      position:relative; z-index:1; font-size:26px; font-weight:800; letter-spacing:-0.02em;
+      margin-top:2px; text-shadow:0 1px 8px rgba(0,0,0,0.25);
+    }
+    .cover-banner-tag { position:relative; z-index:1; margin-top:5px; font-size:12.5px; opacity:0.94; }
+
+    /* Catalogue grid inside the modal */
+    .cover-catalogue { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    @media (max-width:520px) { .cover-catalogue { grid-template-columns:repeat(2,1fr); } }
+    .cover-thumb {
+      position:relative; border-radius:11px; overflow:hidden; aspect-ratio:3 / 2;
+      cursor:pointer; border:2.5px solid transparent;
+      display:flex; align-items:flex-end; padding:10px; color:white;
+      background-size:cover; background-position:center; transition:transform 0.12s;
+    }
+    .cover-thumb:hover { transform:translateY(-2px); }
+    .cover-thumb.selected { border-color:var(--orange); }
+    .cover-thumb::after {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.45));
+    }
+    .cover-thumb-label { position:relative; z-index:1; font-size:12px; font-weight:700; text-shadow:0 1px 4px rgba(0,0,0,0.3); }
+    .cover-thumb-check {
+      position:absolute; top:7px; right:7px; z-index:2; width:20px; height:20px;
+      border-radius:50%; background:var(--orange); color:white;
+      display:none; align-items:center; justify-content:center;
+    }
+    .cover-thumb.selected .cover-thumb-check { display:flex; }
+    .cover-thumb-check svg { width:12px; height:12px; }
+    .cover-upload {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:7px; border:2px dashed var(--border); border-radius:11px; aspect-ratio:3 / 2;
+      cursor:pointer; color:var(--slate); font-size:12px; font-weight:600; text-align:center;
+      transition:all 0.15s;
+    }
+    .cover-upload:hover { border-color:var(--slate-lt); color:var(--navy); background:var(--bg); }
+    .cover-upload svg { width:22px; height:22px; }
+
+    /* Stores list */
+    .store-list { display:flex; flex-direction:column; gap:12px; }
+    .store-row {
+      display:flex; align-items:center; gap:14px; padding:14px 16px;
+      border:1px solid var(--border); border-radius:12px;
+    }
+    .store-row .store-ic {
+      width:42px; height:42px; border-radius:11px; background:var(--teal-bg); color:var(--teal);
+      display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; flex-shrink:0;
+    }
+    .store-row .store-meta { flex:1; min-width:0; }
+    .store-row .store-meta .sn { font-size:14px; font-weight:700; color:var(--navy); }
+    .store-row .store-meta .sa { font-size:12.5px; color:var(--slate); margin-top:2px; }
+    .store-row .store-badge {
+      font-size:11px; font-weight:700; color:#065F46; background:#D1FAE5;
+      padding:3px 9px; border-radius:12px; white-space:nowrap;
+    }
+
     /* ── SCROLLBAR ── */
     ::-webkit-scrollbar { width:5px; }
     ::-webkit-scrollbar-track { background:transparent; }
@@ -667,12 +745,12 @@
 
   <div class="nav-section">
     <div class="nav-group-label">Analytics</div>
-    <button class="nav-item active">
+    <button class="nav-item active" onclick="switchView('insights', this)">
       <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
       Loyalty Insights
       <span class="nav-badge">Live</span>
     </button>
-    <button class="nav-item" onclick="showToast('Coming soon')">
+    <button class="nav-item" onclick="switchView('profiles', this)">
       <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
       Customer Profiles
     </button>
@@ -752,6 +830,7 @@
 
   <!-- ═══════════════════════════════════════════════ CONTENT -->
   <div class="content">
+  <div id="view-insights" class="view-pane">
 
     <!-- HERO -->
     <div class="hero">
@@ -1242,6 +1321,78 @@
       </div>
     </div>
 
+  </div><!-- /view-insights -->
+
+  <!-- ═══════════════════ CUSTOMER PROFILE VIEW ═══════════════════ -->
+  <div id="view-profiles" class="view-pane" hidden>
+
+    <!-- Business profile -->
+    <div class="chart-card" style="margin-bottom:18px">
+      <div class="chart-header" style="margin-bottom:16px">
+        <div>
+          <div class="chart-title">Business profile</div>
+          <div class="chart-sub">Your details as customers see them on receipts and WhatsApp</div>
+        </div>
+        <button class="btn btn-orange" onclick="showToast('Profile saved')">Save changes</button>
+      </div>
+      <div class="profile-grid">
+        <div class="seg-field"><label>Store name</label>
+          <input class="seg-input" type="text" value="Blend &amp; Co."></div>
+        <div class="seg-field"><label>Email address</label>
+          <input class="seg-input" type="email" value="hello@blendandco.co.za"></div>
+        <div class="seg-field"><label>Contact number</label>
+          <input class="seg-input" type="tel" value="+27 21 555 0182"></div>
+        <div class="seg-field"><label>Address</label>
+          <input class="seg-input" type="text" value="14 Main Street, Sea Point, Cape Town, 8005"></div>
+      </div>
+    </div>
+
+    <!-- WhatsApp cover image -->
+    <div class="chart-card" style="margin-bottom:18px">
+      <div class="chart-header" style="margin-bottom:16px">
+        <div>
+          <div class="chart-title">WhatsApp cover image</div>
+          <div class="chart-sub">Shown at the top of every WhatsApp your customers receive</div>
+        </div>
+        <button class="btn btn-ghost" onclick="openCoverCatalogue()">Change cover</button>
+      </div>
+      <div id="coverPreview" class="cover-banner">
+        <div class="cover-banner-cat" id="coverPreviewCat">Café &amp; Coffee</div>
+        <div class="cover-banner-name">Blend &amp; Co.</div>
+        <div class="cover-banner-tag">Earn loyalty cashback every time you shop</div>
+      </div>
+    </div>
+
+    <!-- Stores -->
+    <div class="chart-card">
+      <div class="chart-header" style="margin-bottom:16px">
+        <div>
+          <div class="chart-title">Your stores</div>
+          <div class="chart-sub">Manage the locations linked to this loyalty programme</div>
+        </div>
+        <button class="btn btn-ghost" onclick="showToast('Add a new store')">+ Add store</button>
+      </div>
+      <div class="store-list">
+        <div class="store-row">
+          <div class="store-ic">1</div>
+          <div class="store-meta">
+            <div class="sn">Store 1 · Sea Point</div>
+            <div class="sa">14 Main Street, Sea Point · +27 21 555 0182</div>
+          </div>
+          <span class="store-badge">Active</span>
+        </div>
+        <div class="store-row">
+          <div class="store-ic">2</div>
+          <div class="store-meta">
+            <div class="sn">Store 2 · Claremont</div>
+            <div class="sa">Cavendish Square, Claremont · +27 21 555 0199</div>
+          </div>
+          <span class="store-badge">Active</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /view-profiles -->
   </div><!-- /content -->
 </div><!-- /main -->
 
@@ -1277,6 +1428,27 @@
       <div class="campaign-step" id="campaignStep4"></div>
     </div>
     <footer id="campaignFooter"></footer>
+  </div>
+</div>
+
+<!-- ── WhatsApp Cover Catalogue Modal ── -->
+<div id="coverBackdrop" class="modal-backdrop" hidden role="presentation">
+  <div class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="coverTitle" onclick="event.stopPropagation()">
+    <header>
+      <h2 id="coverTitle">Choose a WhatsApp cover</h2>
+      <button class="modal-close" aria-label="Close" onclick="closeCoverCatalogue()">Close ✕</button>
+    </header>
+    <div class="modal-body">
+      <div class="cover-catalogue" id="coverCatalogue"></div>
+      <input type="file" id="coverFileInput" accept="image/png,image/jpeg,image/webp" hidden>
+    </div>
+    <footer>
+      <div class="seg-edit-preview" id="coverFootNote">Pick a crafted cover or upload your own</div>
+      <div class="seg-edit-actions">
+        <button class="btn btn-ghost" onclick="closeCoverCatalogue()">Cancel</button>
+        <button class="btn btn-orange" onclick="applyCover()">Use selected</button>
+      </div>
+    </footer>
   </div>
 </div>
 
@@ -1886,9 +2058,11 @@ function initSegmentFilter() {
     if (e.key !== 'Escape') return;
     if (!document.getElementById('segEditBackdrop').hidden) closeSegmentEditor();
     if (!document.getElementById('campaignBackdrop').hidden) closeCampaignModal();
+    if (!document.getElementById('coverBackdrop').hidden) closeCoverCatalogue();
   });
   document.getElementById('segEditBackdrop').addEventListener('click', closeSegmentEditor);
   document.getElementById('campaignBackdrop').addEventListener('click', closeCampaignModal);
+  document.getElementById('coverBackdrop').addEventListener('click', closeCoverCatalogue);
 }
 
 // ═══════════════════ SEGMENT EDIT MODAL ═══════════════════
@@ -2650,6 +2824,140 @@ function renderCampStep4() {
   );
 }
 
+// ═══════════════════ VIEW SWITCHING ═══════════════════
+function switchView(view, btn) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.view-pane').forEach(p => { p.hidden = (p.id !== 'view-' + view); });
+
+  const titles = { insights: 'Loyalty Performance Insights', profiles: 'Business Profile' };
+  const titleEl = document.querySelector('.page-title');
+  if (titleEl) titleEl.textContent = titles[view] || '';
+
+  // Period tabs only apply to the insights dashboard.
+  const periodTabs = document.getElementById('periodTabs');
+  if (periodTabs) periodTabs.style.display = (view === 'insights') ? '' : 'none';
+
+  if (view === 'profiles') renderCoverPreview();
+  window.scrollTo(0, 0);
+}
+
+// ═══════════════════ WHATSAPP COVER CATALOGUE ═══════════════════
+// "Crafted" cover designs use rich CSS gradients (no external images, CSP-safe).
+// Uploads are read as data: URLs (allowed by the img-src CSP).
+const ICON_UPLOAD = 'M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 4.414V13a1 1 0 11-2 0V4.414L7.707 6.707a1 1 0 01-1.414 0z';
+
+const COVER_TEMPLATES = [
+  { id:'cafe',       label:'Café',          cat:'Café & Coffee',    bg:'linear-gradient(135deg,#6F4E37 0%,#A9774E 55%,#D8B48C 100%)' },
+  { id:'coffee',     label:'Espresso',      cat:'Café & Coffee',    bg:'linear-gradient(135deg,#241510 0%,#5B3A29 60%,#8C5A3B 100%)' },
+  { id:'restaurant', label:'Restaurant',    cat:'Food & Dining',    bg:'linear-gradient(135deg,#7A1F1F 0%,#B5462E 55%,#E0913C 100%)' },
+  { id:'pizza',      label:'Pizza',         cat:'Food & Dining',    bg:'linear-gradient(135deg,#B11E1E 0%,#E04B2D 55%,#F2A83C 100%)' },
+  { id:'bakery',     label:'Bakery',        cat:'Food & Dining',    bg:'linear-gradient(135deg,#9C6B1E 0%,#D2A24C 55%,#F0D89B 100%)' },
+  { id:'salon',      label:'Hair Salon',    cat:'Beauty & Care',    bg:'linear-gradient(135deg,#4F2350 0%,#9A4E8E 55%,#D98CB5 100%)' },
+  { id:'beauty',     label:'Spa & Beauty',  cat:'Beauty & Care',    bg:'linear-gradient(135deg,#7A3B5E 0%,#C16E89 55%,#F0B7C2 100%)' },
+  { id:'bar',        label:'Bar & Drinks',  cat:'Nightlife',        bg:'linear-gradient(135deg,#0E1F2B 0%,#1F4E5F 55%,#4E8A93 100%)' },
+  { id:'boutique',   label:'Boutique',      cat:'Retail',           bg:'linear-gradient(135deg,#1D1D2E 0%,#3A3A5C 55%,#6E6E9C 100%)' },
+  { id:'fitness',    label:'Fitness',       cat:'Health & Fitness', bg:'linear-gradient(135deg,#0F3D2E 0%,#1E7A4E 55%,#5BC48A 100%)' },
+  { id:'grocery',    label:'Grocery',       cat:'Everyday',         bg:'linear-gradient(135deg,#2E5A1E 0%,#5B8A3C 55%,#A8D08C 100%)' },
+  { id:'florist',    label:'Florist',       cat:'Lifestyle',        bg:'linear-gradient(135deg,#7A2E4E 0%,#C16E8E 45%,#7AB58C 100%)' },
+];
+
+// Committed state
+let _selectedCover = 'cafe';
+let _customCoverDataUrl = null;
+// Pending (modal) state
+let _coverDraft = 'cafe';
+let _customDraftDataUrl = null;
+
+function coverById(id) { return COVER_TEMPLATES.find(t => t.id === id) || COVER_TEMPLATES[0]; }
+
+function applyCoverBg(elm, coverId, customUrl) {
+  if (coverId === 'custom' && customUrl) {
+    elm.style.backgroundImage = 'url("' + customUrl + '")';
+  } else {
+    elm.style.backgroundImage = coverById(coverId).bg;
+  }
+}
+
+function renderCoverPreview() {
+  const banner = document.getElementById('coverPreview');
+  if (!banner) return;
+  applyCoverBg(banner, _selectedCover, _customCoverDataUrl);
+  const cat = document.getElementById('coverPreviewCat');
+  if (cat) cat.textContent = (_selectedCover === 'custom') ? 'Custom image' : coverById(_selectedCover).cat;
+}
+
+function openCoverCatalogue() {
+  _coverDraft = _selectedCover;
+  _customDraftDataUrl = _customCoverDataUrl;
+  buildCoverCatalogue();
+  document.getElementById('coverBackdrop').hidden = false;
+}
+function closeCoverCatalogue() {
+  document.getElementById('coverBackdrop').hidden = true;
+}
+
+function buildCoverCatalogue() {
+  const grid = document.getElementById('coverCatalogue');
+  if (!grid) return;
+  grid.replaceChildren();
+
+  // Upload tile
+  grid.appendChild(el('div', { class:'cover-upload',
+    onClick: () => document.getElementById('coverFileInput').click() },
+    svgIcon(ICON_UPLOAD), el('div', { text:'Upload your own' })
+  ));
+
+  // Uploaded-image thumb (if any)
+  if (_customDraftDataUrl) {
+    const t = el('div', { class:'cover-thumb' + (_coverDraft === 'custom' ? ' selected' : ''),
+      onClick: () => { _coverDraft = 'custom'; buildCoverCatalogue(); } },
+      el('div', { class:'cover-thumb-check' }, svgIcon(ICON_CHECK)),
+      el('div', { class:'cover-thumb-label', text:'Your image' })
+    );
+    t.style.backgroundImage = 'url("' + _customDraftDataUrl + '")';
+    grid.appendChild(t);
+  }
+
+  // Crafted templates
+  for (const tpl of COVER_TEMPLATES) {
+    const t = el('div', { class:'cover-thumb' + (_coverDraft === tpl.id ? ' selected' : ''),
+      onClick: () => { _coverDraft = tpl.id; buildCoverCatalogue(); } },
+      el('div', { class:'cover-thumb-check' }, svgIcon(ICON_CHECK)),
+      el('div', { class:'cover-thumb-label', text: tpl.label })
+    );
+    t.style.backgroundImage = tpl.bg;
+    grid.appendChild(t);
+  }
+}
+
+function applyCover() {
+  _selectedCover = _coverDraft;
+  if (_coverDraft === 'custom') _customCoverDataUrl = _customDraftDataUrl;
+  renderCoverPreview();
+  closeCoverCatalogue();
+  showToast('WhatsApp cover updated');
+}
+
+function initProfiles() {
+  renderCoverPreview();
+  const fileInput = document.getElementById('coverFileInput');
+  if (fileInput) {
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        _customDraftDataUrl = reader.result; // data: URL (CSP-allowed)
+        _coverDraft = 'custom';
+        buildCoverCatalogue();
+      };
+      reader.readAsDataURL(file);
+      e.target.value = ''; // allow re-uploading the same file
+    });
+  }
+}
+
 // ═══════════════════ TOAST ═══════════════════
 let toastTimer;
 function showToast(msg) {
@@ -2670,6 +2978,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initCharts('30D');
   initSegmentFilter();
   initUserPill();
+  initProfiles();
 });
 
 // ═══════════════════ USER IDENTITY PILL ═══════════════════
