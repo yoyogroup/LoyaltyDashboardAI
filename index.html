@@ -15,6 +15,9 @@
   <!-- Auth: runs synchronously BEFORE Chart.js so unauth users never download chart code -->
   <script src="assets/config.js"></script>
   <script src="assets/auth.js"></script>
+  <!-- Merchant data (generated from the PODS export / future MCP file). Sets
+       window.MERCHANT_DATA; the portal falls back to demo data if absent. -->
+  <script src="assets/merchant-data.js"></script>
   <script>
     // Block-render auth gate. If not signed in, auth.js redirects to login.html
     // and nothing further runs on this page.
@@ -855,17 +858,8 @@
           <span id="storeSelectLabel">Store 1 · Sea Point</span>
           <svg class="chev" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
         </button>
-        <div class="store-select-menu" id="storeSelectMenu" hidden>
-          <button class="store-select-opt" data-store="all" onclick="selectStore('all')">All Stores
-            <svg class="tick" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-          </button>
-          <button class="store-select-opt active" data-store="s1" onclick="selectStore('s1')">Store 1 · Sea Point
-            <svg class="tick" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-          </button>
-          <button class="store-select-opt" data-store="s2" onclick="selectStore('s2')">Store 2 · Claremont
-            <svg class="tick" width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-          </button>
-        </div>
+        <!-- Options populated by initStoreSelector() from STORES -->
+        <div class="store-select-menu" id="storeSelectMenu" hidden></div>
       </div>
       <div class="period-tabs" id="periodTabs">
         <button class="period-tab" data-period="7D" onclick="setPeriod('7D',this)">7D</button>
@@ -907,7 +901,7 @@
         </div>
         <div class="hero-stat">
           <div class="hero-stat-val accent" id="heroFreqLift">+133%</div>
-          <div class="hero-stat-label">Frequency<br>Lift</div>
+          <div class="hero-stat-label" id="heroFreqLabel">Frequency<br>Lift</div>
         </div>
       </div>
     </div>
@@ -1421,7 +1415,7 @@
         </div>
         <button class="btn btn-ghost" onclick="showToast('Add a new store')">+ Add store</button>
       </div>
-      <div class="store-list">
+      <div class="store-list" id="profileStoreList">
         <div class="store-row">
           <div class="store-ic">1</div>
           <div class="store-meta">
@@ -1816,7 +1810,9 @@ function initCharts(period) {
 }
 
 // ═══════════════════ KPI UPDATES ═══════════════════
-const KPI_DATA = {
+// Real merchant KPIs come from window.MERCHANT_DATA.kpis (generated from the
+// PODS / MCP export). Falls back to demo figures if no merchant data present.
+const KPI_DATA = (window.MERCHANT_DATA && window.MERCHANT_DATA.kpis) || {
   '7D':  { rlsV:'R3,981', rlsP:'R3,618', rlsC:'▲ 10.0%', alcV:'247', alcP:'224', alcC:'▲ 10.3%', nlcV:'9', nlcP:'7', nlcC:'▲ 28.6%', ceV:'R199', ceP:'R181', ceC:'▲ 9.9%', crV:'R98', crP:'R90', crC:'▲ 8.9%', lsV:'41.8%', lsP:'38.9%', lsC:'▲ 2.9pp' },
   '30D': { rlsV:'R17,234', rlsP:'R15,634', rlsC:'▲ 10.2%', alcV:'247', alcP:'224', alcC:'▲ 10.3%', nlcV:'38', nlcP:'31', nlcC:'▲ 22.6%', ceV:'R861', ceP:'R780', ceC:'▲ 10.4%', crV:'R431', crP:'R396', crC:'▲ 8.7%', lsV:'42.3%', lsP:'39.1%', lsC:'▲ 3.2pp' },
   '90D': { rlsV:'R48,720', rlsP:'R42,310', rlsC:'▲ 15.1%', alcV:'247', alcP:'198', alcC:'▲ 24.7%', nlcV:'97', nlcP:'74', nlcC:'▲ 31.1%', ceV:'R2,436', ceP:'R2,118', ceC:'▲ 15.0%', crV:'R1,201', crP:'R980', crC:'▲ 22.6%', lsV:'43.1%', lsP:'37.4%', lsC:'▲ 5.7pp' },
@@ -1866,12 +1862,23 @@ function updateKPIs(data, period) {
 // Each store has a share of total business. "All Stores" = the full figures;
 // a single store shows its scaled portion. Ratios (share %, basket, frequency)
 // are store-agnostic and never scaled.
-const STORES = {
-  all: { label: 'All Stores',          factor: 1.00 },
-  s1:  { label: 'Store 1 · Sea Point',  factor: 0.58 },
-  s2:  { label: 'Store 2 · Claremont',  factor: 0.42 },
-};
-let currentStore = 's1'; // default to the store you're on
+// Built from window.MERCHANT_DATA.stores when present (one entry per real
+// store + an "All Stores" rollup), else demo stores.
+const STORES = (function buildStores() {
+  const md = window.MERCHANT_DATA;
+  if (md && Array.isArray(md.stores) && md.stores.length) {
+    const out = { all: { label: 'All Stores', factor: 1.00 } };
+    md.stores.forEach(s => { out[s.id] = { label: s.label, factor: s.factor }; });
+    return out;
+  }
+  return {
+    all: { label: 'All Stores',          factor: 1.00 },
+    s1:  { label: 'Store 1 · Sea Point',  factor: 0.58 },
+    s2:  { label: 'Store 2 · Claremont',  factor: 0.42 },
+  };
+})();
+// Default to the first real store (the one the merchant is "on").
+let currentStore = Object.keys(STORES).find(k => k !== 'all') || 'all';
 function storeFactor() { return (STORES[currentStore] || STORES.all).factor; }
 
 function toggleStoreMenu(e) {
@@ -1888,6 +1895,71 @@ function selectStore(id) {
   document.getElementById('storeSelectMenu').hidden = true;
   initCharts(currentPeriod); // re-render everything with the new store factor
   showToast('Viewing · ' + STORES[id].label);
+}
+
+// Build the store dropdown options from STORES (All first, then each store).
+function initStoreSelector() {
+  const menu = document.getElementById('storeSelectMenu');
+  const label = document.getElementById('storeSelectLabel');
+  if (!menu) return;
+  menu.replaceChildren();
+  const order = ['all', ...Object.keys(STORES).filter(k => k !== 'all')];
+  for (const id of order) {
+    const tick = svgIcon(ICON_CHECK);
+    tick.setAttribute('class', 'tick');
+    tick.setAttribute('width', '14'); tick.setAttribute('height', '14');
+    menu.appendChild(el('button', {
+      class: 'store-select-opt' + (id === currentStore ? ' active' : ''),
+      'data-store': id, onClick: () => selectStore(id),
+    }, STORES[id].label, tick));
+  }
+  if (label) label.textContent = STORES[currentStore].label;
+}
+
+// Apply the real merchant's identity across the portal when MERCHANT_DATA exists.
+function applyMerchantBranding() {
+  const md = window.MERCHANT_DATA;
+  if (!md) return;
+  const name = md.profile && md.profile.name;
+  const setText = (sel, v) => { const e = document.querySelector(sel); if (e && v != null) e.textContent = v; };
+
+  if (name) {
+    setText('.hero-text h2', 'Card-Linked Loyalty · ' + name);
+    setText('.store-pill .store-info .name', name);
+    setText('.store-pill .store-avatar', name.charAt(0));
+    const nameInput = document.querySelector('#view-profiles .profile-grid input[type="text"]');
+    if (nameInput) nameInput.value = name;
+    const coverName = document.querySelector('#coverPreview .cover-banner-name');
+    if (coverName) coverName.textContent = name;
+  }
+  if (md.profile) {
+    setText('.store-pill .store-info .sub', md.profile.storeCount + ' stores · Active');
+  }
+  if (md.hero) {
+    setText('#heroShare', md.hero.share);
+    setText('#heroBasketLift', md.hero.basketLift);
+    setText('#heroFreqLift', md.hero.avgVisits);
+    setText('#heroFreqLabel', 'Avg Visits');
+  }
+  renderProfileStores();
+}
+
+// Rebuild the "Your stores" list in My Profile from real store data.
+function renderProfileStores() {
+  const md = window.MERCHANT_DATA;
+  const list = document.getElementById('profileStoreList');
+  if (!md || !list || !Array.isArray(md.stores)) return;
+  list.replaceChildren();
+  md.stores.forEach((s, i) => {
+    list.appendChild(el('div', { class:'store-row' },
+      el('div', { class:'store-ic', text: String(i + 1) }),
+      el('div', { class:'store-meta' },
+        el('div', { class:'sn', text: s.label }),
+        el('div', { class:'sa', text: 'Lifetime sales ' + fmtR(s.value) + ' · ' + s.registrations + ' members · ' + s.soc + '% share' })
+      ),
+      el('span', { class:'store-badge', text:'Active' })
+    ));
+  });
 }
 
 // ═══════════════════ PERIOD SWITCH ═══════════════════
@@ -2009,7 +2081,12 @@ function recomputeAllSegments() {
   }
 }
 
-const CUSTOMERS = [
+// Real customers come from window.MERCHANT_DATA.customers (PODS/MCP export);
+// segments are recomputed locally from the editable rules. Falls back to the
+// demo cohort below when no merchant data is present.
+const CUSTOMERS = (window.MERCHANT_DATA && Array.isArray(window.MERCHANT_DATA.customers) && window.MERCHANT_DATA.customers.length)
+  ? window.MERCHANT_DATA.customers
+  : [
   // ── VIP (all also Active; some also New) ────────────────────────────
   { mobile:'082 ••• 4421', spend:1247.80, visits:14, basket:89.13, cashback:62.39, lastVisit:'2 days ago',  joinedDaysAgo:184, segments:['vip','active'] },
   { mobile:'083 ••• 7752', spend:1108.40, visits:12, basket:92.37, cashback:55.42, lastVisit:'1 day ago',   joinedDaysAgo:212, segments:['vip','active'] },
@@ -3206,6 +3283,8 @@ function showToast(msg) {
 // ═══════════════════ INIT ═══════════════════
 document.addEventListener('DOMContentLoaded', () => {
   Chart.defaults.font.family = 'Inter';
+  applyMerchantBranding();   // swap in real merchant identity (if MERCHANT_DATA present)
+  initStoreSelector();       // build store dropdown from real stores
   initCharts('30D');
   initSegmentFilter();
   initUserPill();
