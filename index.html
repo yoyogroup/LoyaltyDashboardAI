@@ -519,6 +519,79 @@
     .seg-radio-item-label { font-size:13.5px; font-weight:600; color:var(--navy); }
     .seg-radio-item-hint { font-size:12px; color:var(--slate); line-height:1.4; }
 
+    /* ── Target Segment / Campaign modal ── */
+    .modal-card.wide { max-width:540px; }
+    .campaign-step { display:none; }
+    .campaign-step.active { display:block; }
+
+    .campaign-audience-banner {
+      display:flex; align-items:center; gap:13px;
+      background:var(--orange-bg); border-radius:13px; padding:14px 16px; margin-bottom:20px;
+    }
+    .campaign-audience-icon {
+      width:40px; height:40px; border-radius:11px; background:var(--orange);
+      color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .campaign-audience-icon svg { width:20px; height:20px; }
+    .campaign-audience-title { font-size:14.5px; font-weight:800; color:var(--navy); letter-spacing:-0.01em; }
+    .campaign-audience-sub { font-size:12.5px; color:var(--slate); margin-top:1px; }
+
+    .campaign-section-label {
+      font-size:11px; font-weight:700; color:var(--slate); text-transform:uppercase;
+      letter-spacing:0.9px; margin-bottom:11px;
+    }
+    .campaign-list { display:flex; flex-direction:column; gap:10px; }
+    .campaign-card {
+      border:1.5px solid var(--border); border-radius:12px; padding:14px 16px;
+      cursor:pointer; transition:all 0.15s; background:white;
+    }
+    .campaign-card:hover { border-color:var(--slate-lt); background:var(--bg); }
+    .campaign-card.selected { border-color:var(--orange); background:var(--orange-bg); }
+    .campaign-card-top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:5px; }
+    .campaign-card-title { font-size:14px; font-weight:700; color:var(--navy); }
+    .campaign-badge {
+      font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px;
+      padding:3px 8px; border-radius:12px; background:var(--teal-bg); color:var(--teal); white-space:nowrap;
+    }
+    .campaign-card-desc { font-size:12.5px; color:var(--slate); line-height:1.45; margin-bottom:9px; }
+    .campaign-card-meta { display:flex; flex-wrap:wrap; gap:6px; }
+    .campaign-chip {
+      font-size:11px; font-weight:600; padding:3px 9px; border-radius:12px;
+      background:var(--bg); color:var(--navy);
+    }
+    .campaign-chip.voucher { background:#EDE9FE; color:#5B21B6; }
+    .campaign-chip.channel { background:#D1FAE5; color:#065F46; }
+
+    .campaign-recap { border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:6px; }
+    .campaign-recap-row {
+      display:flex; justify-content:space-between; gap:14px;
+      padding:11px 15px; font-size:13px; border-bottom:1px solid var(--border);
+    }
+    .campaign-recap-row:last-child { border-bottom:none; }
+    .campaign-recap-row .k { color:var(--slate); font-weight:500; }
+    .campaign-recap-row .v { color:var(--navy); font-weight:700; text-align:right; }
+
+    .cost-box { background:var(--bg); border-radius:12px; padding:4px 15px; }
+    .cost-row { display:flex; justify-content:space-between; padding:10px 0; font-size:13px; border-bottom:1px solid var(--border); }
+    .cost-row:last-child { border-bottom:none; }
+    .cost-row .ck { color:var(--slate); }
+    .cost-row .cv { color:var(--navy); font-weight:600; font-variant-numeric:tabular-nums; }
+    .cost-row.total .ck { color:var(--navy); font-weight:800; font-size:14px; }
+    .cost-row.total .cv { color:var(--orange); font-weight:800; font-size:16px; }
+
+    .campaign-success { text-align:center; padding:14px 8px 6px; }
+    .campaign-success-icon {
+      width:64px; height:64px; border-radius:50%; background:#D1FAE5; color:#10B981;
+      display:flex; align-items:center; justify-content:center; margin:0 auto 18px;
+    }
+    .campaign-success-icon svg { width:32px; height:32px; }
+    .campaign-success h3 { font-size:20px; font-weight:800; margin-bottom:8px; color:var(--navy); letter-spacing:-0.02em; }
+    .campaign-success p { font-size:13.5px; color:var(--slate); line-height:1.5; margin:0 0 4px; }
+    .campaign-success .recap-pill {
+      display:inline-block; margin-top:16px; background:var(--bg); border-radius:20px;
+      padding:8px 16px; font-size:12.5px; color:var(--navy); font-weight:600;
+    }
+
     /* ── INSIGHT CARDS ── */
     .insight-row { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-bottom:18px; }
     .insight-card {
@@ -889,7 +962,13 @@
             </button>
           </div>
         </div>
-        <button class="btn btn-ghost" onclick="showToast('Viewing all customers')">View all</button>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn btn-ghost" onclick="showToast('Viewing all customers')">View all</button>
+          <button class="btn btn-orange" id="targetSegBtn" onclick="openCampaignModal()">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
+            Target segment
+          </button>
+        </div>
       </div>
 
       <!-- Segment filter chips. Customers can carry up to 3 tags
@@ -1162,6 +1241,22 @@
         <button class="btn btn-primary" onclick="saveSegmentEditor()">Update</button>
       </div>
     </footer>
+  </div>
+</div>
+
+<!-- ── Target Segment / Campaign Modal (3-step flow: choose → review → sent) ── -->
+<div id="campaignBackdrop" class="modal-backdrop" hidden role="presentation">
+  <div class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="campaignTitle" onclick="event.stopPropagation()">
+    <header>
+      <h2 id="campaignTitle">Target segment</h2>
+      <button class="modal-close" aria-label="Close" onclick="closeCampaignModal()">Close ✕</button>
+    </header>
+    <div class="modal-body">
+      <div class="campaign-step" id="campaignStep1"></div>
+      <div class="campaign-step" id="campaignStep2"></div>
+      <div class="campaign-step" id="campaignStep3"></div>
+    </div>
+    <footer id="campaignFooter"></footer>
   </div>
 </div>
 
@@ -1766,13 +1861,14 @@ function initSegmentFilter() {
     });
   });
 
-  // Close modal on ESC or backdrop click.
+  // Close modals on ESC or backdrop click.
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && !document.getElementById('segEditBackdrop').hidden) {
-      closeSegmentEditor();
-    }
+    if (e.key !== 'Escape') return;
+    if (!document.getElementById('segEditBackdrop').hidden) closeSegmentEditor();
+    if (!document.getElementById('campaignBackdrop').hidden) closeCampaignModal();
   });
   document.getElementById('segEditBackdrop').addEventListener('click', closeSegmentEditor);
+  document.getElementById('campaignBackdrop').addEventListener('click', closeCampaignModal);
 }
 
 // ═══════════════════ SEGMENT EDIT MODAL ═══════════════════
@@ -2030,6 +2126,289 @@ function updateCustSubtitle(seg) {
   const meta = SEGMENT_META[seg];
   sub.textContent = meta.label + ' segment · ' + describeRule(seg);
   if (btn) btn.hidden = false;
+}
+
+// ═══════════════════ CAMPAIGN TARGETING ═══════════════════
+// Mock campaign engine. Step 2 (issuing real vouchers + WhatsApp sends) will
+// hook into Yoyo's voucher API later — for now the whole flow is simulated
+// client-side. No customer data leaves the browser.
+const CAMPAIGN_BASE_FEE = 50.00;     // R per targeted campaign
+const CAMPAIGN_VOUCHER_FEE = 0.50;   // R per voucher delivered
+
+// 1–3 recommended campaigns per segment. `voucher: null` = message-only.
+const CAMPAIGNS = {
+  all: [
+    { id:'all-boost',    title:'Store-wide loyalty boost', badge:'Growth',
+      desc:'Blanket cashback across your whole member base to lift overall engagement and footfall.',
+      voucher:{ label:'R10 voucher', minSpend:80 } },
+    { id:'all-seasonal', title:'Seasonal promotion', badge:'Awareness',
+      desc:'A limited-time offer to the entire base — ideal for a month-end or public-holiday push.',
+      voucher:{ label:'R15 voucher', minSpend:100 } },
+  ],
+  new: [
+    { id:'new-welcome',  title:'Welcome reward', badge:'Onboarding',
+      desc:'Send a welcome voucher to lock in the crucial second visit while your brand is still fresh.',
+      voucher:{ label:'R15 voucher', minSpend:80 } },
+    { id:'new-headstart',title:'First-month head start', badge:'Onboarding',
+      desc:'Double cashback for their first 30 days to build the habit early, before they drift.',
+      voucher:null },
+  ],
+  vip: [
+    { id:'vip-thankyou', title:'Thank you, top customer', badge:'Retention',
+      desc:'A surprise thank-you voucher recognising their spend — reinforces the relationship before a competitor does.',
+      voucher:{ label:'R50 voucher', minSpend:150 } },
+    { id:'vip-access',   title:'VIP early access', badge:'Advocacy',
+      desc:'Invite them to a members-only offer or new-product preview. Exclusivity drives word-of-mouth.',
+      voucher:null },
+    { id:'vip-refer',    title:'Refer-a-friend bonus', badge:'Acquisition',
+      desc:'Reward VIPs for bringing in similar high-value customers — your most efficient acquisition channel.',
+      voucher:{ label:'R30 referral reward', minSpend:0 } },
+  ],
+  active: [
+    { id:'active-streak',title:'Keep the streak going', badge:'Retention',
+      desc:'A small bounce-back voucher to maintain their visit momentum and stay top-of-mind.',
+      voucher:{ label:'R10 voucher', minSpend:60 } },
+    { id:'active-basket',title:'Basket booster', badge:'Growth',
+      desc:'Spend R120, get R20 back — nudges up the average basket size on their next visit.',
+      voucher:{ label:'R20 voucher', minSpend:120 } },
+  ],
+  growing: [
+    { id:'grow-tierup',  title:'Tier-up nudge', badge:'Growth',
+      desc:'One more visit unlocks a bonus — accelerate them toward VIP status while engagement is rising.',
+      voucher:{ label:'R25 voucher', minSpend:100 } },
+    { id:'grow-freq',    title:'Frequency challenge', badge:'Retention',
+      desc:'Visit 3× this month, get R30 cashback — locks in the habit while it is still forming.',
+      voucher:{ label:'R30 cashback', minSpend:0 } },
+  ],
+  slipping: [
+    { id:'slip-sooner',  title:'Bring them back sooner', badge:'Win-back',
+      desc:'A win-back voucher with a near-term expiry — re-engage them before they churn for good.',
+      voucher:{ label:'R20 voucher', minSpend:100 } },
+    { id:'slip-missyou', title:'We miss you', badge:'Win-back',
+      desc:'A gentle, no-strings reminder with a small voucher to reactivate lapsing customers.',
+      voucher:{ label:'R15 voucher', minSpend:0 } },
+  ],
+  churned: [
+    { id:'churn-last',   title:'Last-chance comeback', badge:'Win-back',
+      desc:'An aggressive, higher-value offer to recover customers who have gone quiet for 60+ days.',
+      voucher:{ label:'R40 voucher', minSpend:120 } },
+    { id:'churn-react',  title:'Reactivation cashback', badge:'Win-back',
+      desc:'Double cashback on their next visit only — a compelling, low-risk reason to return.',
+      voucher:null },
+  ],
+};
+
+// Flow state
+let _campSeg = 'all';
+let _campAudience = 0;
+let _campSelectedId = null;
+
+// Tiny DOM builder — XSS-safe (textContent / addEventListener, never innerHTML).
+function el(tag, props, ...children) {
+  const node = document.createElement(tag);
+  if (props) {
+    for (const [k, v] of Object.entries(props)) {
+      if (v == null) continue;
+      if (k === 'class') node.className = v;
+      else if (k === 'text') node.textContent = v;
+      else if (k === 'style') node.style.cssText = v;
+      else if (k === 'disabled') { if (v) node.disabled = true; }
+      else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2).toLowerCase(), v);
+      else node.setAttribute(k, v);
+    }
+  }
+  for (const ch of children) {
+    if (ch == null) continue;
+    node.appendChild(typeof ch === 'string' ? document.createTextNode(ch) : ch);
+  }
+  return node;
+}
+
+// Build an SVG icon from a path string via DOM APIs (no innerHTML).
+function svgIcon(pathD) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 20 20');
+  svg.setAttribute('fill', 'currentColor');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', pathD);
+  svg.appendChild(path);
+  return svg;
+}
+const ICON_USERS = 'M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z';
+const ICON_CHECK = 'M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z';
+
+function segLabel(seg) { return seg === 'all' ? 'All Customers' : SEGMENT_META[seg].label; }
+function segmentAudience(seg) {
+  if (seg === 'all') return CUSTOMERS.length;
+  return CUSTOMERS.filter(c => inSegment(c, seg)).length;
+}
+function voucherText(v) {
+  if (!v) return 'Message only — no voucher';
+  return v.minSpend > 0 ? v.label + ' · min spend R' + v.minSpend : v.label + ' · no minimum';
+}
+function currentCampaign() {
+  const list = CAMPAIGNS[_campSeg] || CAMPAIGNS.all;
+  return list.find(c => c.id === _campSelectedId) || null;
+}
+function campaignCost(camp, audience) {
+  const base = CAMPAIGN_BASE_FEE;
+  const perUnit = camp && camp.voucher ? CAMPAIGN_VOUCHER_FEE * audience : 0;
+  return { base, perUnit, total: base + perUnit };
+}
+
+function openCampaignModal() {
+  _campSeg = currentSegment;
+  _campAudience = segmentAudience(_campSeg);
+  _campSelectedId = null;
+  document.getElementById('campaignTitle').textContent = 'Target the ' + segLabel(_campSeg) + ' segment';
+  renderCampaignStep(1);
+  document.getElementById('campaignBackdrop').hidden = false;
+}
+function closeCampaignModal() {
+  document.getElementById('campaignBackdrop').hidden = true;
+  _campSelectedId = null;
+}
+
+function renderCampaignStep(n) {
+  if (n === 1) renderCampStep1();
+  else if (n === 2) renderCampStep2();
+  else if (n === 3) renderCampStep3();
+  for (const i of [1, 2, 3]) {
+    document.getElementById('campaignStep' + i).classList.toggle('active', i === n);
+  }
+}
+
+// ── Step 1: choose a campaign ──
+function renderCampStep1() {
+  const body = document.getElementById('campaignStep1');
+  body.replaceChildren();
+
+  const banner = el('div', { class:'campaign-audience-banner' },
+    el('div', { class:'campaign-audience-icon' }, svgIcon(ICON_USERS)),
+    el('div', {},
+      el('div', { class:'campaign-audience-title', text: "You're targeting the " + segLabel(_campSeg) + ' segment' }),
+      el('div', { class:'campaign-audience-sub',
+        text: _campAudience + ' customer' + (_campAudience === 1 ? '' : 's') + ' · outbound WhatsApp' })
+    )
+  );
+  body.appendChild(banner);
+  body.appendChild(el('div', { class:'campaign-section-label', text:'Recommended campaigns' }));
+
+  const list = el('div', { class:'campaign-list' });
+  for (const camp of (CAMPAIGNS[_campSeg] || CAMPAIGNS.all)) {
+    const meta = el('div', { class:'campaign-card-meta' },
+      el('span', { class:'campaign-chip channel', text:'WhatsApp' }),
+      el('span', { class:'campaign-chip' + (camp.voucher ? ' voucher' : ''), text: voucherText(camp.voucher) })
+    );
+    const card = el('div', {
+      class: 'campaign-card' + (_campSelectedId === camp.id ? ' selected' : ''),
+      onClick: () => { _campSelectedId = camp.id; renderCampaignStep(1); }
+    },
+      el('div', { class:'campaign-card-top' },
+        el('div', { class:'campaign-card-title', text: camp.title }),
+        el('span', { class:'campaign-badge', text: camp.badge })
+      ),
+      el('div', { class:'campaign-card-desc', text: camp.desc }),
+      meta
+    );
+    list.appendChild(card);
+  }
+  body.appendChild(list);
+
+  const footer = document.getElementById('campaignFooter');
+  footer.replaceChildren(
+    el('div', { class:'seg-edit-preview',
+      text: _campAudience + ' recipient' + (_campAudience === 1 ? '' : 's') }),
+    el('div', { class:'seg-edit-actions' },
+      el('button', { class:'btn btn-ghost', onClick: closeCampaignModal }, 'Cancel'),
+      el('button', { class:'btn btn-orange', disabled: !_campSelectedId,
+        onClick: () => { if (_campSelectedId) renderCampaignStep(2); } }, 'Continue')
+    )
+  );
+}
+
+// ── Step 2: review + cost ──
+function renderCampStep2() {
+  const camp = currentCampaign();
+  const body = document.getElementById('campaignStep2');
+  body.replaceChildren();
+  if (!camp) return;
+
+  body.appendChild(el('div', { class:'campaign-section-label', text:'Review your campaign' }));
+
+  const recap = el('div', { class:'campaign-recap' });
+  const rows = [
+    ['Campaign', camp.title],
+    ['Audience', _campAudience + ' ' + segLabel(_campSeg) + ' customer' + (_campAudience === 1 ? '' : 's')],
+    ['Channel', 'Outbound WhatsApp'],
+    ['Voucher', voucherText(camp.voucher)],
+  ];
+  for (const [k, v] of rows) {
+    recap.appendChild(el('div', { class:'campaign-recap-row' },
+      el('span', { class:'k', text:k }),
+      el('span', { class:'v', text:v })
+    ));
+  }
+  body.appendChild(recap);
+
+  const cost = campaignCost(camp, _campAudience);
+  body.appendChild(el('div', { class:'campaign-section-label', text:'Estimated cost', style:'margin-top:20px' }));
+  const box = el('div', { class:'cost-box' });
+  box.appendChild(costRow('Base campaign fee', fmtR(cost.base)));
+  box.appendChild(camp.voucher
+    ? costRow('Voucher delivery (' + _campAudience + ' × R0.50)', fmtR(cost.perUnit))
+    : costRow('WhatsApp messages', 'Included'));
+  box.appendChild(costRow('Total', fmtR(cost.total), true));
+  body.appendChild(box);
+
+  const footer = document.getElementById('campaignFooter');
+  footer.replaceChildren(
+    el('div', { class:'seg-edit-preview' },
+      document.createTextNode('Total '),
+      el('strong', { text: fmtR(cost.total) })
+    ),
+    el('div', { class:'seg-edit-actions' },
+      el('button', { class:'btn btn-ghost', onClick: () => renderCampaignStep(1) }, 'Back'),
+      el('button', { class:'btn btn-orange', onClick: () => renderCampaignStep(3) }, 'Send now')
+    )
+  );
+}
+function costRow(k, v, total) {
+  return el('div', { class:'cost-row' + (total ? ' total' : '') },
+    el('span', { class:'ck', text:k }),
+    el('span', { class:'cv', text:v })
+  );
+}
+
+// ── Step 3: success ──
+function renderCampStep3() {
+  const camp = currentCampaign();
+  const body = document.getElementById('campaignStep3');
+  body.replaceChildren();
+  if (!camp) return;
+
+  const wrap = el('div', { class:'campaign-success' },
+    el('div', { class:'campaign-success-icon' }, svgIcon(ICON_CHECK)),
+    el('h3', { text:'Campaign sent successfully' }),
+    el('p', { text:'Outbound WhatsApp sent to ' + _campAudience + ' ' + segLabel(_campSeg) +
+      ' customer' + (_campAudience === 1 ? '' : 's') + '.' })
+  );
+  if (camp.voucher) {
+    wrap.appendChild(el('p', { text: camp.voucher.label + ' issued to each recipient.' }));
+  }
+  wrap.appendChild(el('div', { class:'recap-pill',
+    text: camp.title + (camp.voucher ? ' · ' + camp.voucher.label : '') }));
+  body.appendChild(wrap);
+
+  const footer = document.getElementById('campaignFooter');
+  footer.replaceChildren(
+    el('div', {}),
+    el('div', { class:'seg-edit-actions' },
+      el('button', { class:'btn btn-primary', onClick: closeCampaignModal }, 'Back to dashboard')
+    )
+  );
 }
 
 // ═══════════════════ TOAST ═══════════════════
