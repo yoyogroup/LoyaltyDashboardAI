@@ -1255,6 +1255,7 @@
       <div class="campaign-step" id="campaignStep1"></div>
       <div class="campaign-step" id="campaignStep2"></div>
       <div class="campaign-step" id="campaignStep3"></div>
+      <div class="campaign-step" id="campaignStep4"></div>
     </div>
     <footer id="campaignFooter"></footer>
   </div>
@@ -2135,66 +2136,72 @@ function updateCustSubtitle(seg) {
 const CAMPAIGN_BASE_FEE = 50.00;     // R per targeted campaign
 const CAMPAIGN_VOUCHER_FEE = 0.50;   // R per voucher delivered
 
-// 1–3 recommended campaigns per segment. `voucher: null` = message-only.
+// 1–3 recommended campaigns per segment. Each has a typed `reward` whose
+// mechanics are editable in step 2. reward.type drives which fields show:
+//   voucher             → value, minSpend, expiry
+//   cashback-multiplier → multiplier, expiry
+//   cashback-fixed      → value, visitsRequired (optional), expiry
+//   referral            → value, expiry
+//   null                → message-only (nothing to configure)
 const CAMPAIGNS = {
   all: [
     { id:'all-boost',    title:'Store-wide loyalty boost', badge:'Growth',
       desc:'Blanket cashback across your whole member base to lift overall engagement and footfall.',
-      voucher:{ label:'R10 voucher', minSpend:80 } },
+      reward:{ type:'voucher', value:10, minSpend:80, expiryDays:14 } },
     { id:'all-seasonal', title:'Seasonal promotion', badge:'Awareness',
       desc:'A limited-time offer to the entire base — ideal for a month-end or public-holiday push.',
-      voucher:{ label:'R15 voucher', minSpend:100 } },
+      reward:{ type:'voucher', value:15, minSpend:100, expiryDays:7 } },
   ],
   new: [
     { id:'new-welcome',  title:'Welcome reward', badge:'Onboarding',
       desc:'Send a welcome voucher to lock in the crucial second visit while your brand is still fresh.',
-      voucher:{ label:'R15 voucher', minSpend:80 } },
+      reward:{ type:'voucher', value:15, minSpend:80, expiryDays:14 } },
     { id:'new-headstart',title:'First-month head start', badge:'Onboarding',
       desc:'Double cashback for their first 30 days to build the habit early, before they drift.',
-      voucher:null },
+      reward:{ type:'cashback-multiplier', multiplier:2, expiryDays:30 } },
   ],
   vip: [
     { id:'vip-thankyou', title:'Thank you, top customer', badge:'Retention',
       desc:'A surprise thank-you voucher recognising their spend — reinforces the relationship before a competitor does.',
-      voucher:{ label:'R50 voucher', minSpend:150 } },
+      reward:{ type:'voucher', value:50, minSpend:150, expiryDays:21 } },
     { id:'vip-access',   title:'VIP early access', badge:'Advocacy',
       desc:'Invite them to a members-only offer or new-product preview. Exclusivity drives word-of-mouth.',
-      voucher:null },
+      reward:null },
     { id:'vip-refer',    title:'Refer-a-friend bonus', badge:'Acquisition',
       desc:'Reward VIPs for bringing in similar high-value customers — your most efficient acquisition channel.',
-      voucher:{ label:'R30 referral reward', minSpend:0 } },
+      reward:{ type:'referral', value:30, expiryDays:30 } },
   ],
   active: [
     { id:'active-streak',title:'Keep the streak going', badge:'Retention',
       desc:'A small bounce-back voucher to maintain their visit momentum and stay top-of-mind.',
-      voucher:{ label:'R10 voucher', minSpend:60 } },
+      reward:{ type:'voucher', value:10, minSpend:60, expiryDays:14 } },
     { id:'active-basket',title:'Basket booster', badge:'Growth',
       desc:'Spend R120, get R20 back — nudges up the average basket size on their next visit.',
-      voucher:{ label:'R20 voucher', minSpend:120 } },
+      reward:{ type:'voucher', value:20, minSpend:120, expiryDays:14 } },
   ],
   growing: [
     { id:'grow-tierup',  title:'Tier-up nudge', badge:'Growth',
       desc:'One more visit unlocks a bonus — accelerate them toward VIP status while engagement is rising.',
-      voucher:{ label:'R25 voucher', minSpend:100 } },
+      reward:{ type:'voucher', value:25, minSpend:100, expiryDays:14 } },
     { id:'grow-freq',    title:'Frequency challenge', badge:'Retention',
       desc:'Visit 3× this month, get R30 cashback — locks in the habit while it is still forming.',
-      voucher:{ label:'R30 cashback', minSpend:0 } },
+      reward:{ type:'cashback-fixed', value:30, visitsRequired:3, expiryDays:30 } },
   ],
   slipping: [
     { id:'slip-sooner',  title:'Bring them back sooner', badge:'Win-back',
       desc:'A win-back voucher with a near-term expiry — re-engage them before they churn for good.',
-      voucher:{ label:'R20 voucher', minSpend:100 } },
+      reward:{ type:'voucher', value:20, minSpend:100, expiryDays:7 } },
     { id:'slip-missyou', title:'We miss you', badge:'Win-back',
       desc:'A gentle, no-strings reminder with a small voucher to reactivate lapsing customers.',
-      voucher:{ label:'R15 voucher', minSpend:0 } },
+      reward:{ type:'voucher', value:15, minSpend:0, expiryDays:14 } },
   ],
   churned: [
     { id:'churn-last',   title:'Last-chance comeback', badge:'Win-back',
       desc:'An aggressive, higher-value offer to recover customers who have gone quiet for 60+ days.',
-      voucher:{ label:'R40 voucher', minSpend:120 } },
+      reward:{ type:'voucher', value:40, minSpend:120, expiryDays:14 } },
     { id:'churn-react',  title:'Reactivation cashback', badge:'Win-back',
       desc:'Double cashback on their next visit only — a compelling, low-risk reason to return.',
-      voucher:null },
+      reward:{ type:'cashback-multiplier', multiplier:2, expiryDays:30 } },
   ],
 };
 
@@ -2202,6 +2209,7 @@ const CAMPAIGNS = {
 let _campSeg = 'all';
 let _campAudience = 0;
 let _campSelectedId = null;
+let _campReward = null;   // editable deep-clone of the chosen campaign's reward
 
 // Tiny DOM builder — XSS-safe (textContent / addEventListener, never innerHTML).
 function el(tag, props, ...children) {
@@ -2244,24 +2252,62 @@ function segmentAudience(seg) {
   if (seg === 'all') return CUSTOMERS.length;
   return CUSTOMERS.filter(c => inSegment(c, seg)).length;
 }
-function voucherText(v) {
-  if (!v) return 'Message only — no voucher';
-  return v.minSpend > 0 ? v.label + ' · min spend R' + v.minSpend : v.label + ' · no minimum';
-}
 function currentCampaign() {
   const list = CAMPAIGNS[_campSeg] || CAMPAIGNS.all;
   return list.find(c => c.id === _campSelectedId) || null;
 }
-function campaignCost(camp, audience) {
+
+// ── Reward description helpers (work off the EDITED reward object) ──
+function describeReward(r) {
+  if (!r) return 'Message only — no voucher';
+  switch (r.type) {
+    case 'voucher':
+      return 'R' + r.value + ' voucher' + (r.minSpend > 0 ? ' · min spend R' + r.minSpend : ' · no minimum');
+    case 'cashback-multiplier':
+      return r.multiplier + '× cashback boost';
+    case 'cashback-fixed':
+      return 'R' + r.value + ' cashback' + (r.visitsRequired ? ' · after ' + r.visitsRequired + ' visits' : '');
+    case 'referral':
+      return 'R' + r.value + ' per referral';
+  }
+  return '';
+}
+function rewardShort(r) {
+  if (!r) return '';
+  switch (r.type) {
+    case 'voucher':             return 'R' + r.value + ' voucher';
+    case 'cashback-multiplier': return r.multiplier + '× cashback';
+    case 'cashback-fixed':      return 'R' + r.value + ' cashback';
+    case 'referral':            return 'R' + r.value + ' referral reward';
+  }
+  return '';
+}
+// Per-recipient delivery fee applies to any reward; message-only = base only.
+function campaignCost(reward, audience) {
   const base = CAMPAIGN_BASE_FEE;
-  const perUnit = camp && camp.voucher ? CAMPAIGN_VOUCHER_FEE * audience : 0;
+  const perUnit = reward ? CAMPAIGN_VOUCHER_FEE * audience : 0;
   return { base, perUnit, total: base + perUnit };
+}
+
+// Date helpers for the editable expiry.
+function defaultExpiryISO(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + (days || 14));
+  return d.toISOString().slice(0, 10);
+}
+function todayISO() { return new Date().toISOString().slice(0, 10); }
+function fmtDateNice(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d)) return '—';
+  return d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function openCampaignModal() {
   _campSeg = currentSegment;
   _campAudience = segmentAudience(_campSeg);
   _campSelectedId = null;
+  _campReward = null;
   document.getElementById('campaignTitle').textContent = 'Target the ' + segLabel(_campSeg) + ' segment';
   renderCampaignStep(1);
   document.getElementById('campaignBackdrop').hidden = false;
@@ -2269,13 +2315,26 @@ function openCampaignModal() {
 function closeCampaignModal() {
   document.getElementById('campaignBackdrop').hidden = true;
   _campSelectedId = null;
+  _campReward = null;
+}
+
+// Deep-clone the chosen campaign's reward into the editable working copy.
+function initCampReward() {
+  const camp = currentCampaign();
+  if (camp && camp.reward) {
+    _campReward = JSON.parse(JSON.stringify(camp.reward));
+    if (!_campReward.expiryDate) _campReward.expiryDate = defaultExpiryISO(_campReward.expiryDays);
+  } else {
+    _campReward = null;
+  }
 }
 
 function renderCampaignStep(n) {
   if (n === 1) renderCampStep1();
   else if (n === 2) renderCampStep2();
   else if (n === 3) renderCampStep3();
-  for (const i of [1, 2, 3]) {
+  else if (n === 4) renderCampStep4();
+  for (const i of [1, 2, 3, 4]) {
     document.getElementById('campaignStep' + i).classList.toggle('active', i === n);
   }
 }
@@ -2285,24 +2344,19 @@ function renderCampStep1() {
   const body = document.getElementById('campaignStep1');
   body.replaceChildren();
 
-  const banner = el('div', { class:'campaign-audience-banner' },
+  body.appendChild(el('div', { class:'campaign-audience-banner' },
     el('div', { class:'campaign-audience-icon' }, svgIcon(ICON_USERS)),
     el('div', {},
       el('div', { class:'campaign-audience-title', text: "You're targeting the " + segLabel(_campSeg) + ' segment' }),
       el('div', { class:'campaign-audience-sub',
         text: _campAudience + ' customer' + (_campAudience === 1 ? '' : 's') + ' · outbound WhatsApp' })
     )
-  );
-  body.appendChild(banner);
+  ));
   body.appendChild(el('div', { class:'campaign-section-label', text:'Recommended campaigns' }));
 
   const list = el('div', { class:'campaign-list' });
   for (const camp of (CAMPAIGNS[_campSeg] || CAMPAIGNS.all)) {
-    const meta = el('div', { class:'campaign-card-meta' },
-      el('span', { class:'campaign-chip channel', text:'WhatsApp' }),
-      el('span', { class:'campaign-chip' + (camp.voucher ? ' voucher' : ''), text: voucherText(camp.voucher) })
-    );
-    const card = el('div', {
+    list.appendChild(el('div', {
       class: 'campaign-card' + (_campSelectedId === camp.id ? ' selected' : ''),
       onClick: () => { _campSelectedId = camp.id; renderCampaignStep(1); }
     },
@@ -2311,9 +2365,11 @@ function renderCampStep1() {
         el('span', { class:'campaign-badge', text: camp.badge })
       ),
       el('div', { class:'campaign-card-desc', text: camp.desc }),
-      meta
-    );
-    list.appendChild(card);
+      el('div', { class:'campaign-card-meta' },
+        el('span', { class:'campaign-chip channel', text:'WhatsApp' }),
+        el('span', { class:'campaign-chip' + (camp.reward ? ' voucher' : ''), text: describeReward(camp.reward) })
+      )
+    ));
   }
   body.appendChild(list);
 
@@ -2324,15 +2380,99 @@ function renderCampStep1() {
     el('div', { class:'seg-edit-actions' },
       el('button', { class:'btn btn-ghost', onClick: closeCampaignModal }, 'Cancel'),
       el('button', { class:'btn btn-orange', disabled: !_campSelectedId,
-        onClick: () => { if (_campSelectedId) renderCampaignStep(2); } }, 'Continue')
+        onClick: () => { if (_campSelectedId) { initCampReward(); renderCampaignStep(2); } } }, 'Continue')
     )
   );
 }
 
-// ── Step 2: review + cost ──
+// ── Step 2: customise the reward mechanics ──
 function renderCampStep2() {
   const camp = currentCampaign();
   const body = document.getElementById('campaignStep2');
+  body.replaceChildren();
+  if (!camp) return;
+
+  body.appendChild(el('div', { class:'campaign-section-label', text:'Customise the reward' }));
+
+  if (!_campReward) {
+    body.appendChild(el('div', { class:'campaign-recap' },
+      el('div', { class:'campaign-recap-row' },
+        el('span', { class:'k', text:'Reward' }),
+        el('span', { class:'v', text:'Message only' })
+      )
+    ));
+    body.appendChild(el('p', { class:'campaign-card-desc', style:'margin-top:12px',
+      text:'This campaign sends a WhatsApp message with no attached voucher — nothing to configure. Continue to review and send.' }));
+  } else {
+    const r = _campReward;
+    const fields = el('div', {});
+    if (r.type === 'voucher') {
+      fields.appendChild(numField('Voucher value (R)', r.value, 5, v => { r.value = v; refreshCampEdit(); }));
+      fields.appendChild(numField('Minimum spend (R)', r.minSpend, 10, v => { r.minSpend = v; refreshCampEdit(); }, 'Set to 0 for no minimum'));
+    } else if (r.type === 'cashback-multiplier') {
+      fields.appendChild(numField('Cashback multiplier (×)', r.multiplier, 1, v => { r.multiplier = v; refreshCampEdit(); }, 'e.g. 2 = double cashback'));
+    } else if (r.type === 'cashback-fixed') {
+      fields.appendChild(numField('Cashback amount (R)', r.value, 5, v => { r.value = v; refreshCampEdit(); }));
+      if (r.visitsRequired != null) {
+        fields.appendChild(numField('Visits required to unlock', r.visitsRequired, 1, v => { r.visitsRequired = v; refreshCampEdit(); }));
+      }
+    } else if (r.type === 'referral') {
+      fields.appendChild(numField('Reward per referral (R)', r.value, 5, v => { r.value = v; refreshCampEdit(); }));
+    }
+    fields.appendChild(dateField('Expiry date', r.expiryDate, v => { r.expiryDate = v; refreshCampEdit(); }));
+    body.appendChild(fields);
+
+    body.appendChild(el('div', { class:'campaign-section-label', text:'Reward preview', style:'margin-top:4px' }));
+    const preview = el('div', { class:'campaign-recap', id:'campRewardPreview' });
+    buildRewardPreview(preview);
+    body.appendChild(preview);
+  }
+
+  const footer = document.getElementById('campaignFooter');
+  footer.replaceChildren(
+    el('div', { class:'seg-edit-preview', text: camp.title }),
+    el('div', { class:'seg-edit-actions' },
+      el('button', { class:'btn btn-ghost', onClick: () => renderCampaignStep(1) }, 'Back'),
+      el('button', { class:'btn btn-orange', onClick: () => renderCampaignStep(3) }, 'Continue')
+    )
+  );
+}
+
+function numField(label, value, step, onChange, hint) {
+  const inp = el('input', { type:'number', class:'seg-input', min:'0', step:String(step || 1), value:String(value) });
+  inp.addEventListener('input', () => {
+    const v = Number(inp.value);
+    if (inp.value !== '' && !Number.isNaN(v) && v >= 0) onChange(v);
+  });
+  const wrap = el('div', { class:'seg-field' }, el('label', { text:label }), inp);
+  if (hint) wrap.appendChild(el('div', { class:'seg-radio-item-hint', style:'margin-top:6px', text:hint }));
+  return wrap;
+}
+function dateField(label, value, onChange) {
+  const inp = el('input', { type:'date', class:'seg-input', value: value || '', min: todayISO() });
+  inp.addEventListener('input', () => { if (inp.value) onChange(inp.value); });
+  return el('div', { class:'seg-field' }, el('label', { text:label }), inp);
+}
+function refreshCampEdit() {
+  const preview = document.getElementById('campRewardPreview');
+  if (preview) buildRewardPreview(preview);
+}
+function buildRewardPreview(container) {
+  container.replaceChildren();
+  const rows = [['Reward', describeReward(_campReward)]];
+  if (_campReward && _campReward.expiryDate) rows.push(['Valid until', fmtDateNice(_campReward.expiryDate)]);
+  for (const [k, v] of rows) {
+    container.appendChild(el('div', { class:'campaign-recap-row' },
+      el('span', { class:'k', text:k }),
+      el('span', { class:'v', text:v })
+    ));
+  }
+}
+
+// ── Step 3: review + cost ──
+function renderCampStep3() {
+  const camp = currentCampaign();
+  const body = document.getElementById('campaignStep3');
   body.replaceChildren();
   if (!camp) return;
 
@@ -2343,8 +2483,9 @@ function renderCampStep2() {
     ['Campaign', camp.title],
     ['Audience', _campAudience + ' ' + segLabel(_campSeg) + ' customer' + (_campAudience === 1 ? '' : 's')],
     ['Channel', 'Outbound WhatsApp'],
-    ['Voucher', voucherText(camp.voucher)],
+    ['Reward', describeReward(_campReward)],
   ];
+  if (_campReward && _campReward.expiryDate) rows.push(['Valid until', fmtDateNice(_campReward.expiryDate)]);
   for (const [k, v] of rows) {
     recap.appendChild(el('div', { class:'campaign-recap-row' },
       el('span', { class:'k', text:k }),
@@ -2353,11 +2494,11 @@ function renderCampStep2() {
   }
   body.appendChild(recap);
 
-  const cost = campaignCost(camp, _campAudience);
+  const cost = campaignCost(_campReward, _campAudience);
   body.appendChild(el('div', { class:'campaign-section-label', text:'Estimated cost', style:'margin-top:20px' }));
   const box = el('div', { class:'cost-box' });
   box.appendChild(costRow('Base campaign fee', fmtR(cost.base)));
-  box.appendChild(camp.voucher
+  box.appendChild(_campReward
     ? costRow('Voucher delivery (' + _campAudience + ' × R0.50)', fmtR(cost.perUnit))
     : costRow('WhatsApp messages', 'Included'));
   box.appendChild(costRow('Total', fmtR(cost.total), true));
@@ -2370,8 +2511,8 @@ function renderCampStep2() {
       el('strong', { text: fmtR(cost.total) })
     ),
     el('div', { class:'seg-edit-actions' },
-      el('button', { class:'btn btn-ghost', onClick: () => renderCampaignStep(1) }, 'Back'),
-      el('button', { class:'btn btn-orange', onClick: () => renderCampaignStep(3) }, 'Send now')
+      el('button', { class:'btn btn-ghost', onClick: () => renderCampaignStep(2) }, 'Back'),
+      el('button', { class:'btn btn-orange', onClick: () => renderCampaignStep(4) }, 'Send now')
     )
   );
 }
@@ -2382,10 +2523,10 @@ function costRow(k, v, total) {
   );
 }
 
-// ── Step 3: success ──
-function renderCampStep3() {
+// ── Step 4: success ──
+function renderCampStep4() {
   const camp = currentCampaign();
-  const body = document.getElementById('campaignStep3');
+  const body = document.getElementById('campaignStep4');
   body.replaceChildren();
   if (!camp) return;
 
@@ -2395,11 +2536,12 @@ function renderCampStep3() {
     el('p', { text:'Outbound WhatsApp sent to ' + _campAudience + ' ' + segLabel(_campSeg) +
       ' customer' + (_campAudience === 1 ? '' : 's') + '.' })
   );
-  if (camp.voucher) {
-    wrap.appendChild(el('p', { text: camp.voucher.label + ' issued to each recipient.' }));
+  if (_campReward) {
+    const expiry = _campReward.expiryDate ? ' · valid until ' + fmtDateNice(_campReward.expiryDate) : '';
+    wrap.appendChild(el('p', { text: rewardShort(_campReward) + ' issued to each recipient' + expiry + '.' }));
   }
   wrap.appendChild(el('div', { class:'recap-pill',
-    text: camp.title + (camp.voucher ? ' · ' + camp.voucher.label : '') }));
+    text: camp.title + (_campReward ? ' · ' + rewardShort(_campReward) : '') }));
   body.appendChild(wrap);
 
   const footer = document.getElementById('campaignFooter');
