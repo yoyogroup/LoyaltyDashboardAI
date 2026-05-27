@@ -15,28 +15,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Push static files to gh-pages branch
+      - name: Publish static files to gh-pages
         run: |
+          set -e
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Copy files we want to publish to a temp folder
-          # (the backend/ directory is intentionally excluded — it's deployed via SAM, not Pages)
-          mkdir /tmp/site
-          cp index.html /tmp/site/
-          cp login.html /tmp/site/
-          cp -r assets /tmp/site/
+          # Build gh-pages INCREMENTALLY on top of its existing history using a
+          # worktree — no orphan branch, no --force. The previous orphan+force
+          # approach intermittently failed with GitHub's "fatal error in
+          # commit_refs" because it replaced the whole history on every deploy.
+          git fetch origin gh-pages || true
+          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+            git worktree add -B gh-pages /tmp/ghp origin/gh-pages
+          else
+            git worktree add --orphan -b gh-pages /tmp/ghp   # first-ever deploy
+          fi
 
-          # Create or reset the gh-pages branch
-          git fetch origin gh-pages 2>/dev/null || true
-          git checkout --orphan gh-pages-deploy
-          git rm -rf . --quiet
+          # Refresh the published files (backend/ is intentionally excluded —
+          # it's deployed via SAM, not Pages).
+          rm -rf /tmp/ghp/assets /tmp/ghp/index.html /tmp/ghp/login.html
+          cp index.html login.html /tmp/ghp/
+          cp -r assets /tmp/ghp/
 
-          # Restore the site files
-          cp /tmp/site/index.html .
-          cp /tmp/site/login.html .
-          cp -r /tmp/site/assets .
-
+          cd /tmp/ghp
           git add index.html login.html assets/
+          if git diff --staged --quiet; then
+            echo "No changes to publish."
+            exit 0
+          fi
           git commit -m "deploy: update GitHub Pages $(date -u '+%Y-%m-%d %H:%M UTC')"
-          git push origin gh-pages-deploy:gh-pages --force
+          git push origin gh-pages
