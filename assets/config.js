@@ -12,12 +12,13 @@
 
 window.YOYO_CONFIG = Object.freeze({
   // Master switch for the auth wall.
-  // Keep false until the backend stack is live, then flip to true and redeploy.
+  // HELD AT false: backend is deployed, but /auth/request-otp is currently
+  // returning 500 (OTP email send failing — see backend logs). Flip to true
+  // ONLY once request-otp returns 200, otherwise the portal locks everyone out.
   AUTH_ENABLED: false,
 
-  // API Gateway base URL — replace after `sam deploy`.
-  // Format: https://{api-id}.execute-api.{region}.amazonaws.com
-  apiBase: 'https://REPLACE-WITH-API-GATEWAY-URL.execute-api.eu-west-1.amazonaws.com',
+  // Live API Gateway base URL (SAM stack: yoyo-loyalty-portal, eu-west-1).
+  apiBase: 'https://7ghddg7uji.execute-api.eu-west-1.amazonaws.com',
 
   // Allowed email domains. Server-side enforces the same list authoritatively;
   // this is purely for client-side UX (early validation hint).

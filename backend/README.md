@@ -111,18 +111,14 @@ aws secretsmanager put-secret-value \
 unset SMS_KEY
 ```
 
-### ⚠️ The SMS endpoint is INTERNAL — the Lambda needs network access
+### The SMS endpoint is publicly reachable — no VPC needed
 
-`SmsEndpoint` defaults to `https://sms-service.int.za.platform.yoyogroup.com/...`,
-which is **not reachable from the AWS-managed Lambda network**. The
-`SendSmsFn` will time out unless it's attached to a VPC/subnets that can
-route to the internal SMS service.
-
-In `template.yaml`, uncomment the `VpcConfig` block on `SendSmsFn` and fill
-in the security group + subnet IDs that have connectivity to the internal
-network. Those subnets also need a path to Secrets Manager (NAT gateway or
-a Secrets Manager VPC endpoint). This is why the browser-direct version
-never delivered — only an in-network server can reach this host.
+`SmsEndpoint` defaults to `https://sms-service.int.za.platform.yoyogroup.com/...`.
+Despite the `int.` hostname this service is in the Integrations (int)
+environment and is **publicly accessible** (confirmed May 2026), so
+`SendSmsFn` reaches it from the default AWS-managed Lambda network — no
+`VpcConfig` required. (The browser still can't call it directly because of
+CORS + the exposed apiKey; that's why the call is proxied server-side.)
 
 **Endpoint contract** (`POST /campaigns/send-sms`):
 - Requires `Authorization: Bearer <session JWT>` — only signed-in merchants
