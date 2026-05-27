@@ -504,6 +504,18 @@
       border-color:var(--orange);
       box-shadow:0 0 0 3px rgba(255,87,50,0.12);
     }
+    .seg-textarea {
+      width:100%; padding:11px 13px; border:1.5px solid var(--border);
+      border-radius:10px; font-size:13.5px; font-family:inherit; color:var(--navy);
+      background:white; outline:none; resize:vertical; min-height:96px; line-height:1.55;
+      transition:border-color 0.15s, box-shadow 0.15s;
+    }
+    .seg-textarea:focus { border-color:var(--orange); box-shadow:0 0 0 3px rgba(255,87,50,0.12); }
+    .seg-reset-link {
+      background:none; border:none; color:var(--orange); font-size:12px; font-weight:600;
+      cursor:pointer; padding:0; margin-top:8px; font-family:inherit; display:block;
+    }
+    .seg-reset-link:hover { text-decoration:underline; }
     .seg-field-row { display:flex; gap:10px; }
     .seg-field-row > * { flex:1; }
     .seg-radio-group { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
@@ -2140,8 +2152,8 @@ function updateCustSubtitle(seg) {
 // Mock campaign engine. Step 2 (issuing real vouchers + WhatsApp sends) will
 // hook into Yoyo's voucher API later — for now the whole flow is simulated
 // client-side. No customer data leaves the browser.
-const CAMPAIGN_BASE_FEE = 50.00;     // R per targeted campaign
-const CAMPAIGN_VOUCHER_FEE = 0.50;   // R per voucher delivered
+const CAMPAIGN_MIN_FEE = 50.00;      // R minimum charge per campaign
+const CAMPAIGN_MESSAGE_FEE = 2.00;   // R per outbound WhatsApp (marketing + WhatsApp + platform fee)
 
 // Every reward is LOYALTY WALLET CASHBACK — a Rand amount loaded into the
 // customer's single loyalty balance. The WhatsApp message is just the
@@ -2227,7 +2239,9 @@ const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sun
 let _campSeg = 'all';
 let _campAudience = 0;
 let _campSelectedId = null;
-let _campReward = null;   // editable deep-clone of the chosen campaign's reward
+let _campReward = null;        // editable deep-clone of the chosen campaign's reward
+let _campMessage = '';         // editable WhatsApp message text
+let _campMessageDirty = false; // true once the merchant edits the message by hand
 
 // Tiny DOM builder — XSS-safe (textContent / addEventListener, never innerHTML).
 function el(tag, props, ...children) {
@@ -2313,11 +2327,12 @@ function notificationText(r) {
 function walletFunding(reward, audience) {
   return reward ? reward.amount * audience : 0;
 }
-// Platform fee: base + per-recipient delivery. Message-only = base only.
-function campaignCost(reward, audience) {
-  const base = CAMPAIGN_BASE_FEE;
-  const perUnit = reward ? CAMPAIGN_VOUCHER_FEE * audience : 0;
-  return { base, perUnit, total: base + perUnit };
+// Charge: R2 per outbound WhatsApp, with a R50 minimum per campaign.
+// (Every recipient gets a message regardless of reward type.)
+function campaignCost(audience) {
+  const messages = CAMPAIGN_MESSAGE_FEE * audience;
+  const total = Math.max(messages, CAMPAIGN_MIN_FEE);
+  return { messages, total, floored: messages < CAMPAIGN_MIN_FEE };
 }
 
 // Date helpers for the editable expiry.
@@ -2339,6 +2354,8 @@ function openCampaignModal() {
   _campAudience = segmentAudience(_campSeg);
   _campSelectedId = null;
   _campReward = null;
+  _campMessage = '';
+  _campMessageDirty = false;
   document.getElementById('campaignTitle').textContent = 'Target the ' + segLabel(_campSeg) + ' segment';
   renderCampaignStep(1);
   document.getElementById('campaignBackdrop').hidden = false;
@@ -2347,9 +2364,11 @@ function closeCampaignModal() {
   document.getElementById('campaignBackdrop').hidden = true;
   _campSelectedId = null;
   _campReward = null;
+  _campMessage = '';
+  _campMessageDirty = false;
 }
 
-// Deep-clone the chosen campaign's reward into the editable working copy.
+// Deep-clone the chosen campaign's reward + seed the suggested WhatsApp message.
 function initCampReward() {
   const camp = currentCampaign();
   if (camp && camp.reward) {
@@ -2358,6 +2377,8 @@ function initCampReward() {
   } else {
     _campReward = null;
   }
+  _campMessage = notificationText(_campReward);
+  _campMessageDirty = false;
 }
 
 function renderCampaignStep(n) {
@@ -2448,6 +2469,7 @@ function renderCampStep2() {
       if (v === 'min-spend' && r.minSpend == null) r.minSpend = 100;
       if (v === 'day' && !r.day) r.day = 'Thursday';
       if (v === 'frequency' && r.visits == null) r.visits = 3;
+      if (!_campMessageDirty) _campMessage = notificationText(r);
       renderCampStep2(); // re-render to show/hide the condition field
     }));
 
@@ -2465,12 +2487,24 @@ function renderCampStep2() {
 
     fields.appendChild(dateField('Offer expires', r.expiryDate, v => { r.expiryDate = v; refreshCampEdit(); }));
     body.appendChild(fields);
-
-    body.appendChild(el('div', { class:'campaign-section-label', text:'Reward preview', style:'margin-top:4px' }));
-    const preview = el('div', { class:'campaign-recap', id:'campRewardPreview' });
-    buildRewardPreview(preview);
-    body.appendChild(preview);
   }
+
+  // WhatsApp message — editable for every campaign (incl. message-only).
+  // Stays in sync with the reward fields until the merchant edits it by hand.
+  body.appendChild(el('div', { class:'campaign-section-label', text:'WhatsApp message', style:'margin-top:6px' }));
+  const ta = el('textarea', { class:'seg-textarea', id:'campMessageInput', maxlength:'500' });
+  ta.value = _campMessage;
+  ta.addEventListener('input', () => { _campMessage = ta.value; _campMessageDirty = true; });
+  body.appendChild(ta);
+  body.appendChild(el('div', { class:'seg-radio-item-hint', style:'margin-top:7px',
+    text:'This is exactly what each customer receives on WhatsApp — edit it to match your brand voice.' }));
+  body.appendChild(el('button', { class:'seg-reset-link', type:'button',
+    onClick: () => {
+      _campMessageDirty = false;
+      _campMessage = notificationText(_campReward);
+      const t = document.getElementById('campMessageInput');
+      if (t) t.value = _campMessage;
+    } }, 'Reset to suggested message'));
 
   const footer = document.getElementById('campaignFooter');
   footer.replaceChildren(
@@ -2507,20 +2541,13 @@ function selectField(label, value, options, onChange) {
   sel.addEventListener('change', () => onChange(sel.value));
   return el('div', { class:'seg-field' }, el('label', { text:label }), sel);
 }
+// On any reward-field change, keep the suggested WhatsApp message in sync —
+// until the merchant has manually edited it (then we leave their copy alone).
 function refreshCampEdit() {
-  const preview = document.getElementById('campRewardPreview');
-  if (preview) buildRewardPreview(preview);
-}
-function buildRewardPreview(container) {
-  container.replaceChildren();
-  const rows = [['Reward', describeReward(_campReward)]];
-  if (_campReward && _campReward.expiryDate) rows.push(['Valid until', fmtDateNice(_campReward.expiryDate)]);
-  for (const [k, v] of rows) {
-    container.appendChild(el('div', { class:'campaign-recap-row' },
-      el('span', { class:'k', text:k }),
-      el('span', { class:'v', text:v })
-    ));
-  }
+  if (_campMessageDirty) return;
+  _campMessage = notificationText(_campReward);
+  const t = document.getElementById('campMessageInput');
+  if (t) t.value = _campMessage;
 }
 
 // ── Step 3: review + cost ──
@@ -2548,21 +2575,19 @@ function renderCampStep3() {
   }
   body.appendChild(recap);
 
-  // WhatsApp notification preview — what each customer will actually receive.
+  // WhatsApp notification preview — the merchant's (possibly edited) message.
   body.appendChild(el('div', { class:'campaign-section-label', text:'WhatsApp notification', style:'margin-top:20px' }));
   body.appendChild(el('div', { class:'wa-preview' },
-    el('div', { text: notificationText(_campReward) }),
+    el('div', { text: _campMessage }),
     el('div', { class:'wa-preview-meta', text:'via WhatsApp · Blend & Co. loyalty' })
   ));
 
-  const cost = campaignCost(_campReward, _campAudience);
+  const cost = campaignCost(_campAudience);
   body.appendChild(el('div', { class:'campaign-section-label', text:'Estimated cost', style:'margin-top:20px' }));
   const box = el('div', { class:'cost-box' });
-  box.appendChild(costRow('Base campaign fee', fmtR(cost.base)));
-  box.appendChild(_campReward
-    ? costRow('Loyalty cashback delivery (' + _campAudience + ' × R0.50)', fmtR(cost.perUnit))
-    : costRow('WhatsApp messages', 'Included'));
-  box.appendChild(costRow('Platform total', fmtR(cost.total), true));
+  box.appendChild(costRow('Outbound WhatsApp (' + _campAudience + ' × R2.00)', fmtR(cost.messages)));
+  if (cost.floored) box.appendChild(costRow('Minimum campaign fee', fmtR(CAMPAIGN_MIN_FEE)));
+  box.appendChild(costRow('Total', fmtR(cost.total), true));
   body.appendChild(box);
 
   // Wallet funding awareness — the real loyalty cash at stake (not a platform fee).
