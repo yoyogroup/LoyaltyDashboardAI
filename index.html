@@ -994,7 +994,7 @@
         </div>
         <div class="kpi-label">Reward Linked Sales</div>
         <div class="kpi-value" id="rls-val">R17,234</div>
-        <div class="kpi-sub">vs <span id="rls-prev">R15,634</span> prior period</div>
+        <div class="kpi-sub">vs <span id="rls-prev">R15,634</span> prior <span class="kpi-period">30 days</span></div>
         <div class="kpi-bar-bg"><div class="kpi-bar-fill" style="width:72%;background:var(--orange)"></div></div>
       </div>
 
@@ -1008,7 +1008,7 @@
         </div>
         <div class="kpi-label">Active Loyalty Customers</div>
         <div class="kpi-value" id="alc-val">247</div>
-        <div class="kpi-sub">vs <span id="alc-prev">224</span> prior period</div>
+        <div class="kpi-sub">vs <span id="alc-prev">224</span> prior <span class="kpi-period">30 days</span></div>
         <div class="kpi-bar-bg"><div class="kpi-bar-fill" style="width:68%;background:var(--teal)"></div></div>
       </div>
 
@@ -1022,7 +1022,7 @@
         </div>
         <div class="kpi-label">New Loyalty Customers</div>
         <div class="kpi-value" id="nlc-val">38</div>
-        <div class="kpi-sub">vs <span id="nlc-prev">31</span> prior period</div>
+        <div class="kpi-sub">vs <span id="nlc-prev">31</span> prior <span class="kpi-period">30 days</span></div>
         <div class="kpi-bar-bg"><div class="kpi-bar-fill" style="width:55%;background:#10B981"></div></div>
       </div>
 
@@ -1036,7 +1036,7 @@
         </div>
         <div class="kpi-label">Cashback Earned</div>
         <div class="kpi-value" id="ce-val">R861</div>
-        <div class="kpi-sub">vs <span id="ce-prev">R780</span> prior period</div>
+        <div class="kpi-sub">vs <span id="ce-prev">R780</span> prior <span class="kpi-period">30 days</span></div>
         <div class="kpi-bar-bg"><div class="kpi-bar-fill" style="width:61%;background:#F59E0B"></div></div>
       </div>
 
@@ -1050,7 +1050,7 @@
         </div>
         <div class="kpi-label">Cashback Redeemed</div>
         <div class="kpi-value" id="cr-val">R431</div>
-        <div class="kpi-sub">50% redemption rate · vs <span id="cr-prev">R396</span></div>
+        <div class="kpi-sub">vs <span id="cr-prev">R396</span> prior <span class="kpi-period">30 days</span></div>
         <div class="kpi-bar-bg"><div class="kpi-bar-fill" style="width:50%;background:var(--orange)"></div></div>
       </div>
 
@@ -1064,7 +1064,7 @@
         </div>
         <div class="kpi-label">Loyalty Share of Checkout</div>
         <div class="kpi-value" id="ls-val">42.3%</div>
-        <div class="kpi-sub">vs <span id="ls-prev">39.1%</span> prior period</div>
+        <div class="kpi-sub">vs <span id="ls-prev">39.1%</span> prior <span class="kpi-period">30 days</span></div>
         <div class="kpi-bar-bg"><div class="kpi-bar-fill" style="width:42%;background:var(--navy)"></div></div>
       </div>
     </div>
@@ -1934,6 +1934,10 @@ function updateKPIs(data, period) {
   // Hero active-member count mirrors the Active Loyalty KPI.
   const heroCount = document.getElementById('heroMemberCount');
   if (heroCount) heroCount.textContent = scaleKpiString(k.alcV, f);
+
+  // Spell out the comparison window on every KPI card ("prior 30 days" etc.)
+  const periodLabel = { '7D':'7 days', '30D':'30 days', '90D':'90 days', '12M':'12 months' }[period] || period;
+  document.querySelectorAll('.kpi-period').forEach(el => { el.textContent = periodLabel; });
 }
 
 // ═══════════════════ STORE SELECTOR ═══════════════════
