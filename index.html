@@ -782,9 +782,82 @@
 
     /* Divider */
     .section-divider { height:1px; background:var(--border); margin:6px 0 20px; }
+
+    /* ═══════════════════ MOBILE RESPONSIVE ═══════════════════ */
+    /* Hamburger (hidden on desktop) + off-canvas sidebar backdrop */
+    .menu-toggle {
+      display:none; background:none; border:none; cursor:pointer; padding:6px;
+      margin-right:2px; color:var(--navy); border-radius:8px;
+    }
+    .menu-toggle:hover { background:var(--bg); }
+    .menu-toggle svg { width:22px; height:22px; display:block; }
+    .sidebar-backdrop {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:49;
+    }
+    .sidebar-backdrop.show { display:block; }
+    .table-scroll { width:100%; }
+
+    @media (max-width:860px) {
+      .menu-toggle { display:inline-flex; }
+      /* Sidebar is fixed/off-canvas on mobile, so body no longer needs flex.
+         Block layout lets .main fill the viewport (avoids flex min-width overflow). */
+      body { display:block; }
+      /* Off-canvas sidebar slides in over the content */
+      .sidebar {
+        transform:translateX(-100%); transition:transform 0.25s ease;
+        width:264px; box-shadow:0 0 50px rgba(0,0,0,0.45);
+      }
+      .sidebar.open { transform:translateX(0); }
+      .main { margin-left:0; min-width:0; }
+
+      /* Topbar wraps; logo/divider drop (logo lives in the drawer) */
+      .topbar {
+        height:auto; min-height:var(--hh); flex-wrap:wrap; gap:10px;
+        padding:10px 14px;
+      }
+      .topbar-left { gap:10px; }
+      .topbar-logo, .topbar-divider { display:none; }
+      .topbar-right { width:100%; gap:8px; flex-wrap:wrap; }
+      .topbar-right > .btn-primary { display:none; } /* hide Need Help to save room */
+
+      .content { padding:18px 14px 32px; }
+
+      /* Hero stacks; stats sit in a row beneath the text */
+      .hero { flex-direction:column; align-items:flex-start; gap:20px; padding:24px 22px; }
+      .hero::after, .hero::before { opacity:0.5; }
+      .hero-text p { max-width:none; }
+      .hero-stats { width:100%; }
+      .hero-stat { flex:1; padding:0 14px; }
+      .hero-stat:first-child { padding-left:0; border-left:none; }
+
+      /* Multi-column grids collapse */
+      .kpi-grid { grid-template-columns:1fr 1fr; gap:12px; }
+      .comparison-cols { grid-template-columns:1fr; }
+      .charts-row.r2, .charts-row.r3 { grid-template-columns:1fr !important; }
+      .insight-row { grid-template-columns:1fr; }
+
+      /* Customer table scrolls sideways instead of crushing */
+      .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .table-scroll .data-table { min-width:660px; }
+
+      /* Modals use more of the screen */
+      .modal-backdrop { padding:12px; }
+      .modal-body { padding:18px; }
+    }
+
+    @media (max-width:480px) {
+      .kpi-grid { grid-template-columns:1fr; }
+      .hero-stat-val { font-size:21px; }
+      .page-title { display:none; }       /* keep the topbar tight on phones */
+      .cust-stat-grid { grid-template-columns:1fr 1fr; }
+      .cover-catalogue { grid-template-columns:repeat(2,1fr); }
+    }
   </style>
 </head>
 <body>
+
+<!-- Mobile drawer backdrop (shown only when the sidebar is open on mobile) -->
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
 <!-- ═══════════════════════════════════════════════════ SIDEBAR -->
 <aside class="sidebar">
@@ -846,6 +919,9 @@
 <div class="main">
   <header class="topbar">
     <div class="topbar-left">
+      <button class="menu-toggle" id="menuToggle" aria-label="Open menu" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
       <img src="assets/logo-black.png" alt="Yoyo" class="topbar-logo">
       <div class="topbar-divider"></div>
       <h1 class="page-title">Loyalty Performance Insights</h1>
@@ -1138,20 +1214,22 @@
         </div>
       </div>
 
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Mobile</th>
-            <th>Total Spend</th>
-            <th>Visits</th>
-            <th>Avg Basket</th>
-            <th>Cashback Earned</th>
-            <th>Last Visit</th>
-            <th>Segment</th>
-          </tr>
-        </thead>
-        <tbody id="custTbody"></tbody>
-      </table>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Mobile</th>
+              <th>Total Spend</th>
+              <th>Visits</th>
+              <th>Avg Basket</th>
+              <th>Cashback Earned</th>
+              <th>Last Visit</th>
+              <th>Segment</th>
+            </tr>
+          </thead>
+          <tbody id="custTbody"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- CHART ROW 1: Revenue Trend + Donut -->
@@ -2259,7 +2337,11 @@ function initSegmentFilter() {
     if (!document.getElementById('campaignBackdrop').hidden) closeCampaignModal();
     if (!document.getElementById('coverBackdrop').hidden) closeCoverCatalogue();
     if (!document.getElementById('customerBackdrop').hidden) closeCustomerDetail();
+    closeSidebar();
   });
+
+  // Any sidebar nav tap collapses the mobile drawer.
+  document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', closeSidebar));
   document.getElementById('segEditBackdrop').addEventListener('click', closeSegmentEditor);
   document.getElementById('campaignBackdrop').addEventListener('click', closeCampaignModal);
   document.getElementById('coverBackdrop').addEventListener('click', closeCoverCatalogue);
@@ -3132,8 +3214,22 @@ function sendCampaignNow() {
   }
 }
 
+// ═══════════════════ MOBILE SIDEBAR DRAWER ═══════════════════
+function toggleSidebar() {
+  const sb = document.querySelector('.sidebar');
+  const bd = document.getElementById('sidebarBackdrop');
+  const open = sb.classList.toggle('open');
+  if (bd) bd.classList.toggle('show', open);
+}
+function closeSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  const bd = document.getElementById('sidebarBackdrop');
+  if (bd) bd.classList.remove('show');
+}
+
 // ═══════════════════ VIEW SWITCHING ═══════════════════
 function switchView(view, btn) {
+  closeSidebar(); // collapse the mobile drawer on navigation
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (btn) btn.classList.add('active');
   document.querySelectorAll('.view-pane').forEach(p => { p.hidden = (p.id !== 'view-' + view); });
