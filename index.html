@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Yoyo – Loyalty Performance Insights</title>
   <!-- Security: CSP restricts scripts/styles to known safe origins only -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.execute-api.eu-west-1.amazonaws.com https://sms-service.int.za.platform.yoyogroup.com; frame-ancestors 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.execute-api.eu-west-1.amazonaws.com; frame-ancestors 'none';">
   <meta http-equiv="X-Frame-Options" content="DENY">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <!-- Prevent search engine indexing of this merchant portal -->
@@ -2930,33 +2930,30 @@ function renderCampStep4() {
 }
 
 // ═══════════════════ SMS SEND (campaign dispatch) ═══════════════════
-// On "Send now" we fire a real SMS via Yoyo's integration service so you can
-// see exactly what a customer receives. For now the recipient is hardcoded to
-// the test mobile, and we always send the campaign's WhatsApp message text.
+// Dispatch is handled SERVER-SIDE: the browser calls our own backend
+// (POST {apiBase}/campaigns/send-sms) with the session JWT; the Lambda
+// verifies the token and forwards to Yoyo's SMS service using the apiKey
+// held in Secrets Manager. The SMS key NEVER reaches the browser, and the
+// server-to-server call avoids CORS + reaches the internal SMS host.
 //
-// NOTE (security/guardrails): the apiKey is exposed client-side here for
-// testing only. Before go-live this call should move to the AWS backend so
-// the key never reaches the browser, and to avoid browser CORS limits.
-const SMS_ENDPOINT = 'https://sms-service.int.za.platform.yoyogroup.com/api/smsservice/sms';
-const SMS_API_KEY = 'tristan_drum';
-const SMS_TEST_MOBILE = '+27828888797'; // hardcoded test recipient (0828888797)
-
+// Until the backend is deployed + auth is enabled, this simulates the send
+// (advances to success and logs the message) so the demo still flows.
 function sendCampaignNow() {
-  // Advance to the success screen straight away — don't block on the network.
-  renderCampaignStep(4);
+  renderCampaignStep(4); // show success straight away
 
-  const ref = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
-  fetch(SMS_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apiKey': SMS_API_KEY },
-    body: JSON.stringify({
-      mobile: SMS_TEST_MOBILE,
-      text: _campMessage,
-      reference: ref,
-    }),
-  })
-    .then(r => { if (!r.ok) console.warn('[SMS] service returned status', r.status); })
-    .catch(err => console.warn('[SMS] send failed (likely CORS or internal-network only):', err));
+  const cfg = window.YOYO_CONFIG;
+  if (cfg && cfg.AUTH_ENABLED && window.YoyoAuth) {
+    const ref = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
+    window.YoyoAuth.authFetch('/campaigns/send-sms', {
+      method: 'POST',
+      body: JSON.stringify({ text: _campMessage, reference: ref }),
+    })
+      .then(r => { if (!r.ok) console.warn('[SMS] backend returned status', r.status); })
+      .catch(err => console.warn('[SMS] send failed:', err));
+  } else {
+    // Backend/auth not live yet — simulate so the journey still completes.
+    console.info('[SMS] simulated (backend not live). Would send:', _campMessage);
+  }
 }
 
 // ═══════════════════ VIEW SWITCHING ═══════════════════

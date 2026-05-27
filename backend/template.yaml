@@ -32,6 +32,20 @@ Parameters:
     MaxValue: 90
     Description: How long the JWT session lasts, in days.
 
+  SmsEndpoint:
+    Type: String
+    Default: https://sms-service.int.za.platform.yoyogroup.com/api/smsservice/sms
+    Description: >
+      Yoyo SMS integration service URL. This is an INTERNAL host — the Lambda
+      must be deployed with network reachability to it (see VPC note below).
+
+  TestSmsMobile:
+    Type: String
+    Default: '+27828888797'
+    Description: >
+      TEST PHASE recipient — every campaign send goes here so the journey can
+      be verified. Replace with the real audience flow before go-live.
+
 # ─────────────────────────────────────────────────────────────────────
 # Globals — applied to every function
 # ─────────────────────────────────────────────────────────────────────
@@ -46,6 +60,7 @@ Globals:
       LogFormat: JSON               # Structured logs → CloudWatch / Loki friendly
     Environment:
       Variables:
+        ALLOWED_ORIGIN: !Ref AllowedOrigin
         ALLOWED_DOMAINS: !Ref AllowedDomainsCsv
         SESSION_DAYS: !Ref SessionDays
         RESEND_FROM: !Ref ResendFromEmail
@@ -53,6 +68,9 @@ Globals:
         RATE_TABLE: !Ref RateLimitTable
         RESEND_SECRET_ARN: !Ref ResendApiKeySecret
         JWT_SECRET_ARN: !Ref JwtSigningSecret
+        SMS_ENDPOINT: !Ref SmsEndpoint
+        SMS_SECRET_ARN: !Ref SmsApiKeySecret
+        TEST_SMS_MOBILE: !Ref TestSmsMobile
 
 # ─────────────────────────────────────────────────────────────────────
 # Resources
@@ -115,6 +133,14 @@ Resources:
         PasswordLength: 64
         ExcludePunctuation: true
         IncludeSpace: false
+
+  # ─── Secrets: SMS service API key (you populate post-deploy) ──────
+  SmsApiKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub yoyo-loyalty/sms-api-key-${AWS::StackName}
+      Description: API key (apiKey header) for the Yoyo SMS integration service.
+      # No SecretString here — set it via `aws secretsmanager put-secret-value`.
 
   # ─── API Gateway HTTP API (cheap + fast) ──────────────────────────
   AuthApi:
@@ -179,6 +205,41 @@ Resources:
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: !Ref JwtSigningSecret
 
+  # ─── Lambda: send-sms (authenticated campaign dispatch) ───────────
+  # Verifies the caller's session JWT, then forwards the message to the
+  # SMS service using the key from Secrets Manager. Key never touches the
+  # browser; server-to-server call avoids CORS.
+  #
+  # ⚠️ VPC NOTE: SmsEndpoint is an INTERNAL host (*.int.za.platform...).
+  # A default Lambda runs in the AWS-managed network and will NOT reach it.
+  # To deploy for real, attach this function to a VPC/subnets that can route
+  # to the internal SMS service, e.g. uncomment and fill in:
+  #
+  #   VpcConfig:
+  #     SecurityGroupIds: [sg-xxxxxxxx]
+  #     SubnetIds: [subnet-aaaa, subnet-bbbb]
+  #
+  # (Those subnets need a route to the internal network + NAT for Secrets
+  # Manager, or a Secrets Manager VPC endpoint.)
+  SendSmsFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub yoyo-loyalty-send-sms-${AWS::StackName}
+      CodeUri: src/
+      Handler: send-sms.handler
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: POST
+            Path: /campaigns/send-sms
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref JwtSigningSecret
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref SmsApiKeySecret
+
 # ─────────────────────────────────────────────────────────────────────
 # Outputs
 # ─────────────────────────────────────────────────────────────────────
@@ -189,6 +250,9 @@ Outputs:
   ResendSecretArn:
     Description: Put your Resend API key here with `aws secretsmanager put-secret-value`.
     Value: !Ref ResendApiKeySecret
+  SmsSecretArn:
+    Description: Put the SMS service apiKey here with `aws secretsmanager put-secret-value`.
+    Value: !Ref SmsApiKeySecret
   JwtSecretArn:
     Description: JWT signing key — auto-generated; rotate quarterly.
     Value: !Ref JwtSigningSecret
