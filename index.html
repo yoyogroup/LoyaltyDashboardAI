@@ -559,8 +559,15 @@
       font-size:11px; font-weight:600; padding:3px 9px; border-radius:12px;
       background:var(--bg); color:var(--navy);
     }
-    .campaign-chip.voucher { background:#EDE9FE; color:#5B21B6; }
+    .campaign-chip.wallet { background:#EDE9FE; color:#5B21B6; }
     .campaign-chip.channel { background:#D1FAE5; color:#065F46; }
+
+    /* WhatsApp notification preview bubble (review step) */
+    .wa-preview {
+      background:#DCF8C6; border-radius:12px; border-top-left-radius:3px;
+      padding:12px 15px; font-size:13px; color:#1D1D1F; line-height:1.5;
+    }
+    .wa-preview-meta { font-size:10.5px; color:#4B7A52; font-weight:600; margin-top:7px; }
 
     .campaign-recap { border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:6px; }
     .campaign-recap-row {
@@ -2136,74 +2143,85 @@ function updateCustSubtitle(seg) {
 const CAMPAIGN_BASE_FEE = 50.00;     // R per targeted campaign
 const CAMPAIGN_VOUCHER_FEE = 0.50;   // R per voucher delivered
 
-// 1–3 recommended campaigns per segment. Each has a typed `reward` whose
-// mechanics are editable in step 2. reward.type drives which fields show:
-//   voucher             → value, minSpend, expiry
-//   cashback-multiplier → multiplier, expiry
-//   cashback-fixed      → value, visitsRequired (optional), expiry
-//   referral            → value, expiry
-//   null                → message-only (nothing to configure)
+// Every reward is LOYALTY WALLET CASHBACK — a Rand amount loaded into the
+// customer's single loyalty balance. The WhatsApp message is just the
+// notification. reward.trigger decides when the cash lands + which fields
+// the builder shows:
+//   instant    → load the wallet now (no condition)         → amount, expiry
+//   min-spend  → earn on next spend over R{minSpend}          → amount, minSpend, expiry
+//   day        → earn when they shop on {day} (slow-day push) → amount, day, expiry
+//   frequency  → earn after {visits} visits                   → amount, visits, expiry
+//   null       → message-only (no reward to configure)
 const CAMPAIGNS = {
   all: [
     { id:'all-boost',    title:'Store-wide loyalty boost', badge:'Growth',
-      desc:'Blanket cashback across your whole member base to lift overall engagement and footfall.',
-      reward:{ type:'voucher', value:10, minSpend:80, expiryDays:14 } },
-    { id:'all-seasonal', title:'Seasonal promotion', badge:'Awareness',
-      desc:'A limited-time offer to the entire base — ideal for a month-end or public-holiday push.',
-      reward:{ type:'voucher', value:15, minSpend:100, expiryDays:7 } },
+      desc:'Drop a little cashback into every member’s loyalty wallet on their next qualifying shop to lift overall engagement.',
+      reward:{ trigger:'min-spend', amount:10, minSpend:80, expiryDays:14 } },
+    { id:'all-seasonal', title:'Seasonal push', badge:'Awareness',
+      desc:'A limited-time wallet boost to the whole base — ideal for a month-end or public-holiday nudge.',
+      reward:{ trigger:'min-spend', amount:15, minSpend:100, expiryDays:7 } },
   ],
   new: [
-    { id:'new-welcome',  title:'Welcome reward', badge:'Onboarding',
-      desc:'Send a welcome voucher to lock in the crucial second visit while your brand is still fresh.',
-      reward:{ type:'voucher', value:15, minSpend:80, expiryDays:14 } },
-    { id:'new-headstart',title:'First-month head start', badge:'Onboarding',
-      desc:'Double cashback for their first 30 days to build the habit early, before they drift.',
-      reward:{ type:'cashback-multiplier', multiplier:2, expiryDays:30 } },
+    { id:'new-welcome',  title:'Welcome boost', badge:'Onboarding',
+      desc:'Load cashback on their next qualifying shop to lock in the crucial second visit while your brand is still fresh.',
+      reward:{ trigger:'min-spend', amount:15, minSpend:80, expiryDays:14 } },
+    { id:'new-headstart',title:'Head-start top-up', badge:'Onboarding',
+      desc:'Instantly load a small starter balance into their loyalty wallet to build the habit early.',
+      reward:{ trigger:'instant', amount:10, expiryDays:30 } },
   ],
   vip: [
-    { id:'vip-thankyou', title:'Thank you, top customer', badge:'Retention',
-      desc:'A surprise thank-you voucher recognising their spend — reinforces the relationship before a competitor does.',
-      reward:{ type:'voucher', value:50, minSpend:150, expiryDays:21 } },
+    { id:'vip-thankyou', title:'Thank-you top-up', badge:'Retention',
+      desc:'Instantly load a generous thank-you into their loyalty wallet for being a top customer — reinforces the relationship before a competitor does.',
+      reward:{ trigger:'instant', amount:100, expiryDays:30 } },
     { id:'vip-access',   title:'VIP early access', badge:'Advocacy',
-      desc:'Invite them to a members-only offer or new-product preview. Exclusivity drives word-of-mouth.',
+      desc:'Invite them to a members-only offer or new-product preview. Exclusivity drives word-of-mouth — no cashback needed.',
       reward:null },
-    { id:'vip-refer',    title:'Refer-a-friend bonus', badge:'Acquisition',
-      desc:'Reward VIPs for bringing in similar high-value customers — your most efficient acquisition channel.',
-      reward:{ type:'referral', value:30, expiryDays:30 } },
+    { id:'vip-weekend',  title:'VIP weekend boost', badge:'Growth',
+      desc:'Reward them with extra wallet cashback when they shop on a chosen day — great for driving weekend footfall.',
+      reward:{ trigger:'day', amount:50, day:'Saturday', expiryDays:14 } },
   ],
   active: [
     { id:'active-streak',title:'Keep the streak going', badge:'Retention',
-      desc:'A small bounce-back voucher to maintain their visit momentum and stay top-of-mind.',
-      reward:{ type:'voucher', value:10, minSpend:60, expiryDays:14 } },
-    { id:'active-basket',title:'Basket booster', badge:'Growth',
-      desc:'Spend R120, get R20 back — nudges up the average basket size on their next visit.',
-      reward:{ type:'voucher', value:20, minSpend:120, expiryDays:14 } },
+      desc:'A small wallet boost on their next qualifying shop to maintain visit momentum and stay top-of-mind.',
+      reward:{ trigger:'min-spend', amount:10, minSpend:60, expiryDays:14 } },
+    { id:'active-thursday',title:'Slow-day booster', badge:'Growth',
+      desc:'Drive footfall on quieter days — load extra wallet cashback when they shop on your chosen day.',
+      reward:{ trigger:'day', amount:20, day:'Thursday', expiryDays:14 } },
   ],
   growing: [
-    { id:'grow-tierup',  title:'Tier-up nudge', badge:'Growth',
-      desc:'One more visit unlocks a bonus — accelerate them toward VIP status while engagement is rising.',
-      reward:{ type:'voucher', value:25, minSpend:100, expiryDays:14 } },
+    { id:'grow-tierup',  title:'Tier-up boost', badge:'Growth',
+      desc:'A bigger wallet boost on their next qualifying shop to accelerate them toward VIP while engagement is rising.',
+      reward:{ trigger:'min-spend', amount:25, minSpend:100, expiryDays:14 } },
     { id:'grow-freq',    title:'Frequency challenge', badge:'Retention',
-      desc:'Visit 3× this month, get R30 cashback — locks in the habit while it is still forming.',
-      reward:{ type:'cashback-fixed', value:30, visitsRequired:3, expiryDays:30 } },
+      desc:'Load cashback after a set number of visits — locks in the habit while it is still forming.',
+      reward:{ trigger:'frequency', amount:30, visits:3, expiryDays:30 } },
   ],
   slipping: [
     { id:'slip-sooner',  title:'Bring them back sooner', badge:'Win-back',
-      desc:'A win-back voucher with a near-term expiry — re-engage them before they churn for good.',
-      reward:{ type:'voucher', value:20, minSpend:100, expiryDays:7 } },
-    { id:'slip-missyou', title:'We miss you', badge:'Win-back',
-      desc:'A gentle, no-strings reminder with a small voucher to reactivate lapsing customers.',
-      reward:{ type:'voucher', value:15, minSpend:0, expiryDays:14 } },
+      desc:'Instantly load wallet cashback and notify them to come back soon — re-engage before they churn for good.',
+      reward:{ trigger:'instant', amount:20, expiryDays:10 } },
+    { id:'slip-spend',   title:'Win-back spend boost', badge:'Win-back',
+      desc:'Load cashback on their next qualifying shop to give a clear reason to return.',
+      reward:{ trigger:'min-spend', amount:20, minSpend:100, expiryDays:10 } },
   ],
   churned: [
     { id:'churn-last',   title:'Last-chance comeback', badge:'Win-back',
-      desc:'An aggressive, higher-value offer to recover customers who have gone quiet for 60+ days.',
-      reward:{ type:'voucher', value:40, minSpend:120, expiryDays:14 } },
-    { id:'churn-react',  title:'Reactivation cashback', badge:'Win-back',
-      desc:'Double cashback on their next visit only — a compelling, low-risk reason to return.',
-      reward:{ type:'cashback-multiplier', multiplier:2, expiryDays:30 } },
+      desc:'Instantly load a generous wallet boost for customers who have gone quiet for 60+ days — a strong reason to return.',
+      reward:{ trigger:'instant', amount:40, expiryDays:14 } },
+    { id:'churn-spend',  title:'Reactivation boost', badge:'Win-back',
+      desc:'Load cashback on their next qualifying shop to win back lapsed customers.',
+      reward:{ trigger:'min-spend', amount:30, minSpend:80, expiryDays:14 } },
   ],
 };
+
+// Trigger options shown in the reward builder + the days for day-of-week.
+const TRIGGER_OPTIONS = [
+  { value:'instant',   label:'Instant top-up — load the wallet now' },
+  { value:'min-spend', label:'On next qualifying spend' },
+  { value:'day',       label:'When they shop on a chosen day' },
+  { value:'frequency', label:'After a number of visits' },
+];
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
 // Flow state
 let _campSeg = 'all';
@@ -2258,31 +2276,44 @@ function currentCampaign() {
 }
 
 // ── Reward description helpers (work off the EDITED reward object) ──
+// Every reward loads cashback into the customer's single loyalty wallet.
 function describeReward(r) {
-  if (!r) return 'Message only — no voucher';
-  switch (r.type) {
-    case 'voucher':
-      return 'R' + r.value + ' voucher' + (r.minSpend > 0 ? ' · min spend R' + r.minSpend : ' · no minimum');
-    case 'cashback-multiplier':
-      return r.multiplier + '× cashback boost';
-    case 'cashback-fixed':
-      return 'R' + r.value + ' cashback' + (r.visitsRequired ? ' · after ' + r.visitsRequired + ' visits' : '');
-    case 'referral':
-      return 'R' + r.value + ' per referral';
+  if (!r) return 'Message only — no cashback';
+  const amt = 'R' + r.amount;
+  switch (r.trigger) {
+    case 'instant':   return amt + ' loaded to loyalty wallet now';
+    case 'min-spend': return amt + ' to loyalty wallet · spend R' + r.minSpend + '+';
+    case 'day':       return amt + ' to loyalty wallet · ' + r.day + 's only';
+    case 'frequency': return amt + ' to loyalty wallet · after ' + r.visits + ' visits';
   }
-  return '';
+  return amt + ' to loyalty wallet';
 }
 function rewardShort(r) {
   if (!r) return '';
-  switch (r.type) {
-    case 'voucher':             return 'R' + r.value + ' voucher';
-    case 'cashback-multiplier': return r.multiplier + '× cashback';
-    case 'cashback-fixed':      return 'R' + r.value + ' cashback';
-    case 'referral':            return 'R' + r.value + ' referral reward';
-  }
-  return '';
+  return 'R' + r.amount + ' loyalty cashback';
 }
-// Per-recipient delivery fee applies to any reward; message-only = base only.
+// Customer-facing WhatsApp notification copy (no emojis — clean + on-brand).
+function notificationText(r) {
+  if (!r) return 'A quick note from your favourite store — pop in soon.';
+  const amt = 'R' + r.amount;
+  const by = r.expiryDate ? fmtDateNice(r.expiryDate) : 'soon';
+  switch (r.trigger) {
+    case 'instant':
+      return "Good news — we've loaded " + amt + " into your loyalty wallet. Pop in before " + by + " and it's yours to spend.";
+    case 'min-spend':
+      return "Spend R" + r.minSpend + " or more before " + by + " and we'll drop " + amt + " straight into your loyalty wallet.";
+    case 'day':
+      return "Shop with us on a " + r.day + " before " + by + " and earn an extra " + amt + " in your loyalty wallet.";
+    case 'frequency':
+      return "Visit us " + r.visits + " times before " + by + " and we'll load " + amt + " into your loyalty wallet.";
+  }
+  return amt + " is waiting in your loyalty wallet.";
+}
+// Total loyalty cash funded into wallets (exact for instant, max for conditional).
+function walletFunding(reward, audience) {
+  return reward ? reward.amount * audience : 0;
+}
+// Platform fee: base + per-recipient delivery. Message-only = base only.
 function campaignCost(reward, audience) {
   const base = CAMPAIGN_BASE_FEE;
   const perUnit = reward ? CAMPAIGN_VOUCHER_FEE * audience : 0;
@@ -2367,7 +2398,7 @@ function renderCampStep1() {
       el('div', { class:'campaign-card-desc', text: camp.desc }),
       el('div', { class:'campaign-card-meta' },
         el('span', { class:'campaign-chip channel', text:'WhatsApp' }),
-        el('span', { class:'campaign-chip' + (camp.reward ? ' voucher' : ''), text: describeReward(camp.reward) })
+        el('span', { class:'campaign-chip' + (camp.reward ? ' wallet' : ''), text: describeReward(camp.reward) })
       )
     ));
   }
@@ -2392,7 +2423,7 @@ function renderCampStep2() {
   body.replaceChildren();
   if (!camp) return;
 
-  body.appendChild(el('div', { class:'campaign-section-label', text:'Customise the reward' }));
+  body.appendChild(el('div', { class:'campaign-section-label', text:'Customise the loyalty cashback' }));
 
   if (!_campReward) {
     body.appendChild(el('div', { class:'campaign-recap' },
@@ -2402,24 +2433,37 @@ function renderCampStep2() {
       )
     ));
     body.appendChild(el('p', { class:'campaign-card-desc', style:'margin-top:12px',
-      text:'This campaign sends a WhatsApp message with no attached voucher — nothing to configure. Continue to review and send.' }));
+      text:'This campaign sends a WhatsApp notification with no cashback attached — nothing to configure. Continue to review and send.' }));
   } else {
     const r = _campReward;
     const fields = el('div', {});
-    if (r.type === 'voucher') {
-      fields.appendChild(numField('Voucher value (R)', r.value, 5, v => { r.value = v; refreshCampEdit(); }));
-      fields.appendChild(numField('Minimum spend (R)', r.minSpend, 10, v => { r.minSpend = v; refreshCampEdit(); }, 'Set to 0 for no minimum'));
-    } else if (r.type === 'cashback-multiplier') {
-      fields.appendChild(numField('Cashback multiplier (×)', r.multiplier, 1, v => { r.multiplier = v; refreshCampEdit(); }, 'e.g. 2 = double cashback'));
-    } else if (r.type === 'cashback-fixed') {
-      fields.appendChild(numField('Cashback amount (R)', r.value, 5, v => { r.value = v; refreshCampEdit(); }));
-      if (r.visitsRequired != null) {
-        fields.appendChild(numField('Visits required to unlock', r.visitsRequired, 1, v => { r.visitsRequired = v; refreshCampEdit(); }));
-      }
-    } else if (r.type === 'referral') {
-      fields.appendChild(numField('Reward per referral (R)', r.value, 5, v => { r.value = v; refreshCampEdit(); }));
+
+    // Amount into the loyalty wallet — always editable.
+    fields.appendChild(numField('Cashback into loyalty wallet (R)', r.amount, 5,
+      v => { r.amount = v; refreshCampEdit(); }));
+
+    // Trigger builder — decides when the cash lands.
+    fields.appendChild(selectField('When does it land?', r.trigger, TRIGGER_OPTIONS, v => {
+      r.trigger = v;
+      if (v === 'min-spend' && r.minSpend == null) r.minSpend = 100;
+      if (v === 'day' && !r.day) r.day = 'Thursday';
+      if (v === 'frequency' && r.visits == null) r.visits = 3;
+      renderCampStep2(); // re-render to show/hide the condition field
+    }));
+
+    // Condition field specific to the chosen trigger.
+    if (r.trigger === 'min-spend') {
+      fields.appendChild(numField('Minimum spend to qualify (R)', r.minSpend, 10,
+        v => { r.minSpend = v; refreshCampEdit(); }));
+    } else if (r.trigger === 'day') {
+      fields.appendChild(selectField('Qualifying day', r.day, DAYS.map(d => ({ value:d, label:d })),
+        v => { r.day = v; refreshCampEdit(); }));
+    } else if (r.trigger === 'frequency') {
+      fields.appendChild(numField('Visits required to unlock', r.visits, 1,
+        v => { r.visits = v; refreshCampEdit(); }));
     }
-    fields.appendChild(dateField('Expiry date', r.expiryDate, v => { r.expiryDate = v; refreshCampEdit(); }));
+
+    fields.appendChild(dateField('Offer expires', r.expiryDate, v => { r.expiryDate = v; refreshCampEdit(); }));
     body.appendChild(fields);
 
     body.appendChild(el('div', { class:'campaign-section-label', text:'Reward preview', style:'margin-top:4px' }));
@@ -2453,6 +2497,16 @@ function dateField(label, value, onChange) {
   inp.addEventListener('input', () => { if (inp.value) onChange(inp.value); });
   return el('div', { class:'seg-field' }, el('label', { text:label }), inp);
 }
+function selectField(label, value, options, onChange) {
+  const sel = el('select', { class:'seg-select' });
+  for (const o of options) {
+    const opt = el('option', { value: o.value, text: o.label });
+    if (o.value === value) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener('change', () => onChange(sel.value));
+  return el('div', { class:'seg-field' }, el('label', { text:label }), sel);
+}
 function refreshCampEdit() {
   const preview = document.getElementById('campRewardPreview');
   if (preview) buildRewardPreview(preview);
@@ -2485,7 +2539,7 @@ function renderCampStep3() {
     ['Channel', 'Outbound WhatsApp'],
     ['Reward', describeReward(_campReward)],
   ];
-  if (_campReward && _campReward.expiryDate) rows.push(['Valid until', fmtDateNice(_campReward.expiryDate)]);
+  if (_campReward && _campReward.expiryDate) rows.push(['Offer expires', fmtDateNice(_campReward.expiryDate)]);
   for (const [k, v] of rows) {
     recap.appendChild(el('div', { class:'campaign-recap-row' },
       el('span', { class:'k', text:k }),
@@ -2494,15 +2548,31 @@ function renderCampStep3() {
   }
   body.appendChild(recap);
 
+  // WhatsApp notification preview — what each customer will actually receive.
+  body.appendChild(el('div', { class:'campaign-section-label', text:'WhatsApp notification', style:'margin-top:20px' }));
+  body.appendChild(el('div', { class:'wa-preview' },
+    el('div', { text: notificationText(_campReward) }),
+    el('div', { class:'wa-preview-meta', text:'via WhatsApp · Blend & Co. loyalty' })
+  ));
+
   const cost = campaignCost(_campReward, _campAudience);
   body.appendChild(el('div', { class:'campaign-section-label', text:'Estimated cost', style:'margin-top:20px' }));
   const box = el('div', { class:'cost-box' });
   box.appendChild(costRow('Base campaign fee', fmtR(cost.base)));
   box.appendChild(_campReward
-    ? costRow('Voucher delivery (' + _campAudience + ' × R0.50)', fmtR(cost.perUnit))
+    ? costRow('Loyalty cashback delivery (' + _campAudience + ' × R0.50)', fmtR(cost.perUnit))
     : costRow('WhatsApp messages', 'Included'));
-  box.appendChild(costRow('Total', fmtR(cost.total), true));
+  box.appendChild(costRow('Platform total', fmtR(cost.total), true));
   body.appendChild(box);
+
+  // Wallet funding awareness — the real loyalty cash at stake (not a platform fee).
+  if (_campReward) {
+    const fund = walletFunding(_campReward, _campAudience);
+    const fundText = _campReward.trigger === 'instant'
+      ? 'Plus ' + fmtR(fund) + ' loaded into customer loyalty wallets now.'
+      : 'Plus up to ' + fmtR(fund) + ' into loyalty wallets — only funded when customers qualify.';
+    body.appendChild(el('p', { class:'campaign-card-desc', style:'margin-top:10px', text: fundText }));
+  }
 
   const footer = document.getElementById('campaignFooter');
   footer.replaceChildren(
@@ -2537,8 +2607,10 @@ function renderCampStep4() {
       ' customer' + (_campAudience === 1 ? '' : 's') + '.' })
   );
   if (_campReward) {
-    const expiry = _campReward.expiryDate ? ' · valid until ' + fmtDateNice(_campReward.expiryDate) : '';
-    wrap.appendChild(el('p', { text: rewardShort(_campReward) + ' issued to each recipient' + expiry + '.' }));
+    const line = _campReward.trigger === 'instant'
+      ? 'R' + _campReward.amount + ' loaded into each loyalty wallet now.'
+      : 'R' + _campReward.amount + ' will land in each loyalty wallet once they qualify.';
+    wrap.appendChild(el('p', { text: line }));
   }
   wrap.appendChild(el('div', { class:'recap-pill',
     text: camp.title + (_campReward ? ' · ' + rewardShort(_campReward) : '') }));
