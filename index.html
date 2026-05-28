@@ -3482,8 +3482,8 @@ const AI_REC_TEMPLATES = [
       if (cycle < expiry * 2 || cycle > 90) return false;
       return (cycle - lvd) > expiry;
     },
-    title: n => 'Pull ' + n + ' long-cycle customers in sooner than their usual rhythm',
-    desc:  'These customers have a long natural shopping cycle — there is real room to compress. A short-fuse reward pulls the next visit forward and lifts their lifetime frequency.',
+    title: n => 'Speeding up the next purchase',
+    desc:  'Targeting occasional shoppers with urgent, time-sensitive deals to get them back in-store faster.',
     buildReward: cal => ({ trigger:'min-spend', amount: cal.rewardSmall, minSpend: cal.minSpendNormal, expiryDays: cal.expiryUrgent }),
     message: r => 'R' + r.amount + " is reserved in your loyalty wallet — spend R" + r.minSpend + "+ before {expiry} to claim it. We'd love to see you back sooner!",
   },
