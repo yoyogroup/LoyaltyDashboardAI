@@ -466,6 +466,36 @@
       font-size:13px;
     }
 
+    /* ── PAGINATION (Customer Analysis table) ── */
+    .pagination {
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; flex-wrap:wrap; padding:14px 2px 2px; margin-top:6px;
+      border-top:1px solid var(--border);
+    }
+    .pagination:empty { display:none; }
+    .pagination-info { font-size:12.5px; color:var(--slate); }
+    .pagination-controls { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+    .page-btn {
+      background:var(--bg); border:1px solid var(--border); border-radius:7px;
+      font-size:12.5px; font-weight:600; color:var(--navy);
+      padding:6px 11px; cursor:pointer; min-width:34px;
+      transition:background 0.12s, border-color 0.12s, color 0.12s;
+      font-family:inherit;
+    }
+    .page-btn:hover:not(:disabled) { background:white; border-color:var(--slate-lt); }
+    .page-btn.active {
+      background:var(--navy); color:white; border-color:var(--navy);
+      box-shadow:0 1px 3px rgba(15,30,53,0.18);
+    }
+    .page-btn:disabled { opacity:0.4; cursor:not-allowed; }
+    .page-ellipsis { color:var(--slate-lt); padding:0 4px; font-size:13px; user-select:none; }
+    .page-view-all {
+      background:none; border:none; color:var(--orange);
+      font-size:12.5px; font-weight:600; cursor:pointer;
+      padding:6px 8px; margin-left:6px; font-family:inherit;
+    }
+    .page-view-all:hover { text-decoration:underline; }
+
     /* ── "Edit segment" button (shown next to subtitle when a segment is active) ── */
     .cust-sub-row {
       display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:2px;
@@ -1222,6 +1252,8 @@
           <tbody id="custTbody"></tbody>
         </table>
       </div>
+      <!-- Pagination controls (rendered by renderPagination()) -->
+      <div class="pagination" id="custPagination"></div>
     </div>
 
     <!-- CHART ROW 1: Revenue Trend + Donut -->
@@ -2201,10 +2233,17 @@ function avatarClassFor(c) {
   return 't';                                  // teal — default
 }
 
+// Pagination state for the Customer Analysis table.
+const CUST_PAGE_SIZE = 30;
+let _custPage = 1;
+let _custViewAll = false;
+
 function renderCustomers(seg) {
   const tbody = document.getElementById('custTbody');
   if (!tbody) return;
   tbody.replaceChildren(); // safe clear
+  const pagWrap = document.getElementById('custPagination');
+  if (pagWrap) pagWrap.replaceChildren();
 
   const filtered = seg === 'all'
     ? CUSTOMERS.slice()
@@ -2222,8 +2261,17 @@ function renderCustomers(seg) {
     return;
   }
 
+  // ── Pagination slice ──────────────────────────────────────────────
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / CUST_PAGE_SIZE));
+  if (_custPage > totalPages) _custPage = 1;
+  const showAll = _custViewAll || total <= CUST_PAGE_SIZE;
+  const startIdx = showAll ? 0 : (_custPage - 1) * CUST_PAGE_SIZE;
+  const endIdx   = showAll ? total : Math.min(startIdx + CUST_PAGE_SIZE, total);
+  const pageItems = filtered.slice(startIdx, endIdx);
+
   // Use DOM APIs (textContent), not innerHTML — XSS-safe per Yoyo guardrails
-  for (const c of filtered) {
+  for (const c of pageItems) {
     const tr = document.createElement('tr');
     // Whole row is clickable → opens the customer's detail view.
     tr.addEventListener('click', () => openCustomerDetail(c));
@@ -2286,6 +2334,75 @@ function renderCustomers(seg) {
 
     tbody.appendChild(tr);
   }
+
+  renderPagination(total, totalPages, startIdx, endIdx, showAll);
+}
+
+// Build the pagination controls (info text + page buttons + View-all toggle).
+// Skips entirely when there's only one page worth of rows.
+function renderPagination(total, totalPages, startIdx, endIdx, showAll) {
+  const wrap = document.getElementById('custPagination');
+  if (!wrap) return;
+  wrap.replaceChildren();
+  if (total <= CUST_PAGE_SIZE && !_custViewAll) return; // no controls needed
+
+  const info = el('div', { class:'pagination-info',
+    text: showAll
+      ? 'Showing all ' + total + ' customers'
+      : 'Showing ' + (startIdx + 1) + '–' + endIdx + ' of ' + total
+  });
+  wrap.appendChild(info);
+
+  const ctrls = el('div', { class:'pagination-controls' });
+
+  if (!showAll) {
+    ctrls.appendChild(el('button', {
+      class:'page-btn', disabled: _custPage === 1,
+      onClick: () => { _custPage--; renderCustomers(currentSegment); },
+    }, 'Prev'));
+
+    for (const p of pageList(_custPage, totalPages)) {
+      if (p === '…') {
+        ctrls.appendChild(el('span', { class:'page-ellipsis', text:'…' }));
+      } else {
+        ctrls.appendChild(el('button', {
+          class: 'page-btn' + (p === _custPage ? ' active' : ''),
+          onClick: () => { _custPage = p; renderCustomers(currentSegment); },
+        }, String(p)));
+      }
+    }
+
+    ctrls.appendChild(el('button', {
+      class:'page-btn', disabled: _custPage === totalPages,
+      onClick: () => { _custPage++; renderCustomers(currentSegment); },
+    }, 'Next'));
+  }
+
+  ctrls.appendChild(el('button', {
+    class:'page-view-all',
+    onClick: () => {
+      _custViewAll = !_custViewAll;
+      _custPage = 1;
+      renderCustomers(currentSegment);
+    },
+  }, showAll ? 'Paginate' : 'View all'));
+
+  wrap.appendChild(ctrls);
+}
+
+// Compact page list: e.g. 1 2 3 … 12  or  1 … 5 6 7 … 12
+function pageList(cur, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const set = new Set([1, total, cur, cur - 1, cur + 1]);
+  const nums = [...set].filter(p => p >= 1 && p <= total).sort((a, b) => a - b);
+  const out = [];
+  let prev = 0;
+  for (const p of nums) {
+    if (prev && p > prev + 1) out.push('…');
+    out.push(p);
+    prev = p;
+  }
+  return out;
 }
 
 // Counts use INCLUSION — a VIP+Active+New customer counts once in each of
@@ -2316,6 +2433,7 @@ function initSegmentFilter() {
       chip.classList.add('active');
       const seg = chip.getAttribute('data-seg');
       currentSegment = seg;
+      _custPage = 1;   // restart pagination on segment change
       renderCustomers(seg);
       updateCustSubtitle(seg);
     });
