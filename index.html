@@ -3394,29 +3394,38 @@ function renderCampStep4() {
 const AI_REC_TEMPLATES = [
   {
     id: 'next-visit-accelerator',
-    badge: 'Growth', priority: 110, // top play — prevention beats recovery
-    audienceLabel: 'overdue regulars',
-    // Personal-cadence intervention: infer each customer's natural cycle
-    // (joinedDaysAgo ÷ visits-1) and fire ONLY when they're at 0.85×–1.6×
-    // of that cycle — past their rhythm, but not yet "lapsed" (those are
-    // handled by win-back / churned plays).
+    badge: 'Growth', priority: 110, // top play — frequency lift on long-cycle customers
+    audienceLabel: 'long-cycle customers',
+    // FREQUENCY-INCREASE play (not slip prevention): target customers whose
+    // natural cycle is long enough that "come back sooner than usual" is
+    // genuinely possible. We pick customers who've shopped recently but
+    // aren't at the end of their cycle yet — a short-fuse reward pulls the
+    // next visit forward, compressing their personal rhythm.
+    //
+    // If everyone shops every 1–3 days (e.g. Treat's coffee crowd), this
+    // play correctly surfaces zero — there's no headroom to compress.
     audienceFilter: c => {
       if (c.visits < 2) return false;                         // need ≥2 visits to infer rhythm
       if (c.joinedDaysAgo < 30) return false;                 // need history for a reliable estimate
       if (inSegment(c, 'slipping') || inSegment(c, 'churned')) return false;
       const lvd = lastVisitDaysFromText(c.lastVisit);
-      if (lvd === Infinity) return false;
+      if (lvd === Infinity || lvd < 1) return false;          // skip same-day shoppers
       const cycle = c.joinedDaysAgo / Math.max(1, c.visits - 1);
-      // Cycle floor: 1.5d covers coffee-rhythm customers (1–3d) but excludes
-      // sub-daily noise (multi-shop-per-day edge cases). Ceiling 60d skips
-      // sporadic shoppers whose "rhythm" isn't reliable.
-      if (cycle < 1.5 || cycle > 60) return false;
-      return lvd >= cycle * 0.85 && lvd <= cycle * 1.8;       // at-or-past their rhythm, before lapse threshold
+      // Cycle must be at least 2× the offer expiry, otherwise the "come
+      // back sooner" framing breaks down (their natural pace already matches
+      // the offer window). Ceiling 90d skips sporadic / unreliable rhythms.
+      const offerExpiry = 7; // matches reward.expiryDays below
+      if (cycle < offerExpiry * 2 || cycle > 90) return false;
+      // The offer must land BEFORE their next natural visit. The customer's
+      // next natural visit is in (cycle - lvd) days from today; the offer
+      // expires in `offerExpiry` days. Real compression requires the offer
+      // to pull them in noticeably earlier than natural.
+      return (cycle - lvd) > offerExpiry;
     },
-    title: n => 'Pull ' + n + ' customers back before they slip their rhythm',
-    desc:  'These customers are right at the edge of their personal return cycle. Intervene now — before they cool — and you compress repeat frequency instead of paying to recover churn later.',
+    title: n => 'Pull ' + n + ' long-cycle customers in sooner than their usual rhythm',
+    desc:  'These customers have a long natural shopping cycle — there is real room to compress. A short-fuse reward pulls the next visit forward and lifts their lifetime frequency.',
     reward: { trigger:'min-spend', amount:15, minSpend:60, expiryDays:7 },
-    message: r => 'R' + r.amount + " is reserved in your loyalty wallet — spend R" + r.minSpend + "+ before {expiry} and it's yours. Your usual visit is a little overdue.",
+    message: r => 'R' + r.amount + " is reserved in your loyalty wallet — spend R" + r.minSpend + "+ before {expiry} to claim it. We'd love to see you back sooner!",
   },
   {
     id: 'win-back-slipping',
