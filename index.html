@@ -283,6 +283,19 @@
       background:white; border:1px solid var(--border); border-radius:14px;
       padding:5px 11px; font-weight:600;
     }
+    /* Calibration badge — shows the merchant the engine adapted to their data */
+    .ai-recs-tuning {
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:11px; color:var(--slate); font-weight:600;
+      background:white; border:1px solid var(--border); border-radius:14px;
+      padding:5px 11px 5px 9px; margin-top:10px;
+    }
+    .ai-recs-tuning::before {
+      content:''; width:6px; height:6px; border-radius:50%;
+      background:var(--success);
+      box-shadow:0 0 0 3px rgba(16,185,129,0.15);
+    }
+    .ai-recs-tuning:empty { display:none; }
     .ai-recs-grid {
       display:grid; grid-template-columns:repeat(3, 1fr); gap:14px;
     }
@@ -1113,6 +1126,7 @@
             AI Recommended Actions
           </div>
           <div class="ai-recs-sub">The three highest-impact campaigns our engine identified from your latest data — refreshes as customer behaviour changes.</div>
+          <div class="ai-recs-tuning" id="aiRecsTuning"></div>
         </div>
         <div class="ai-recs-meta" id="aiRecsMeta">Refreshed today</div>
       </div>
@@ -3391,100 +3405,147 @@ function renderCampStep4() {
 // Activating a recommendation jumps the campaign modal straight into the
 // "Edit reward" step with the audience, reward, and message pre-filled —
 // the merchant tweaks and sends in one click.
+// ── Merchant calibration ─────────────────────────────────────────────
+// Derives the merchant's behavioural fingerprint from their own customer
+// data, so reward amounts, min-spends, and expiries fit the merchant's
+// economics instead of being one-size-fits-all. Same engine, transparently
+// tuned per merchant — coffee gets R15/5d expiry, clothing gets R125/30d.
+let _merchantCal = null;
+function calibrateMerchant(customers) {
+  const fallback = {
+    medianBasket: 80, medianCycle: 14,
+    rewardSmall: 15, rewardMedium: 25, rewardLarge: 50,
+    minSpendEntry: 50, minSpendNormal: 75, minSpendTierUp: 120,
+    expiryUrgent: 7, expiryMedium: 14, expiryLong: 30,
+  };
+  if (!Array.isArray(customers) || customers.length === 0) return fallback;
+
+  const baskets = customers.map(c => +c.basket).filter(b => b > 0).sort((a, b) => a - b);
+  if (baskets.length === 0) return fallback;
+  const medianBasket = baskets[Math.floor(baskets.length / 2)];
+
+  // Personal cycle = joinedDaysAgo / (visits - 1). Take the median across
+  // customers with enough history to make the estimate stable.
+  const cycles = customers
+    .filter(c => c.visits >= 2 && c.joinedDaysAgo >= 14)
+    .map(c => c.joinedDaysAgo / Math.max(1, c.visits - 1))
+    .sort((a, b) => a - b);
+  const medianCycle = cycles.length ? cycles[Math.floor(cycles.length / 2)] : 14;
+
+  // Round Rand values to "nice" marketing numbers (R5 / R10 / R25 / R100 steps).
+  const nice = (n) => {
+    if (n < 50)  return Math.max(5, Math.round(n / 5) * 5);
+    if (n < 200) return Math.round(n / 10) * 10;
+    if (n < 1000) return Math.round(n / 25) * 25;
+    return Math.round(n / 100) * 100;
+  };
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  return {
+    medianBasket: Math.round(medianBasket),
+    medianCycle: Math.round(medianCycle * 10) / 10,
+    // Reward magnitudes — proportional to typical basket
+    rewardSmall:  nice(medianBasket * 0.15),  // ~15% — frequency lift / first-time
+    rewardMedium: nice(medianBasket * 0.25),  // ~25% — tier-up / basket boost
+    rewardLarge:  nice(medianBasket * 0.5),   // ~50% — VIP thank-you / churn recovery
+    // Minimum-spend thresholds — relative to typical basket
+    minSpendEntry:  nice(medianBasket * 0.7), // below typical — easy to qualify
+    minSpendNormal: nice(medianBasket * 0.9), // at typical — natural fit
+    minSpendTierUp: nice(medianBasket * 1.5), // above typical — stretch shop
+    // Offer expiry windows — scale with merchant pace, clamped to sensible bounds
+    expiryUrgent: clamp(Math.round(medianCycle),       5, 30),  // urgency offers
+    expiryMedium: clamp(Math.round(medianCycle * 1.5), 10, 45), // most offers
+    expiryLong:   clamp(Math.round(medianCycle * 3),   21, 90), // retention / instant gifts
+  };
+}
+
+// ── Recommendation templates ─────────────────────────────────────────
+// Each template now references the calibration (`cal`) instead of fixed
+// numbers — the play stays the same, the offer adapts to merchant context.
 const AI_REC_TEMPLATES = [
   {
     id: 'next-visit-accelerator',
-    badge: 'Growth', priority: 110, // top play — frequency lift on long-cycle customers
+    badge: 'Growth', priority: 110,
     audienceLabel: 'long-cycle customers',
-    // FREQUENCY-INCREASE play (not slip prevention): target customers whose
-    // natural cycle is long enough that "come back sooner than usual" is
-    // genuinely possible. We pick customers who've shopped recently but
-    // aren't at the end of their cycle yet — a short-fuse reward pulls the
-    // next visit forward, compressing their personal rhythm.
-    //
-    // If everyone shops every 1–3 days (e.g. Treat's coffee crowd), this
-    // play correctly surfaces zero — there's no headroom to compress.
-    audienceFilter: c => {
-      if (c.visits < 2) return false;                         // need ≥2 visits to infer rhythm
-      if (c.joinedDaysAgo < 30) return false;                 // need history for a reliable estimate
+    // Frequency-increase play. Targets customers whose natural cycle is at
+    // least 2× the calibrated urgent-expiry — only then is "shop sooner" real.
+    // Excludes anyone whose next natural visit would already happen before
+    // the offer expires (no compression possible). For a daily-coffee merchant
+    // this correctly fires zero; for a clothing merchant it fires often.
+    audienceFilter: (c, cal) => {
+      if (c.visits < 2) return false;
+      if (c.joinedDaysAgo < 30) return false;
       if (inSegment(c, 'slipping') || inSegment(c, 'churned')) return false;
       const lvd = lastVisitDaysFromText(c.lastVisit);
-      if (lvd === Infinity || lvd < 1) return false;          // skip same-day shoppers
+      if (lvd === Infinity || lvd < 1) return false;
       const cycle = c.joinedDaysAgo / Math.max(1, c.visits - 1);
-      // Cycle must be at least 2× the offer expiry, otherwise the "come
-      // back sooner" framing breaks down (their natural pace already matches
-      // the offer window). Ceiling 90d skips sporadic / unreliable rhythms.
-      const offerExpiry = 7; // matches reward.expiryDays below
-      if (cycle < offerExpiry * 2 || cycle > 90) return false;
-      // The offer must land BEFORE their next natural visit. The customer's
-      // next natural visit is in (cycle - lvd) days from today; the offer
-      // expires in `offerExpiry` days. Real compression requires the offer
-      // to pull them in noticeably earlier than natural.
-      return (cycle - lvd) > offerExpiry;
+      const expiry = cal.expiryUrgent;
+      if (cycle < expiry * 2 || cycle > 90) return false;
+      return (cycle - lvd) > expiry;
     },
     title: n => 'Pull ' + n + ' long-cycle customers in sooner than their usual rhythm',
     desc:  'These customers have a long natural shopping cycle — there is real room to compress. A short-fuse reward pulls the next visit forward and lifts their lifetime frequency.',
-    reward: { trigger:'min-spend', amount:15, minSpend:60, expiryDays:7 },
+    buildReward: cal => ({ trigger:'min-spend', amount: cal.rewardSmall, minSpend: cal.minSpendNormal, expiryDays: cal.expiryUrgent }),
     message: r => 'R' + r.amount + " is reserved in your loyalty wallet — spend R" + r.minSpend + "+ before {expiry} to claim it. We'd love to see you back sooner!",
   },
   {
     id: 'win-back-slipping',
     badge: 'Win-back', priority: 100,
     audienceLabel: 'lapsed regulars',
-    audienceFilter: c => inSegment(c, 'slipping') && c.visits >= 3,
+    audienceFilter: (c) => inSegment(c, 'slipping') && c.visits >= 3,
     title: n => 'Win back ' + n + " customers who haven't returned in 30+ days",
     desc:  'These were regular shoppers — a small nudge could re-anchor the habit before the gap becomes permanent.',
-    reward: { trigger:'instant', amount:20, expiryDays:7 },
+    buildReward: cal => ({ trigger:'instant', amount: cal.rewardSmall, expiryDays: cal.expiryUrgent }),
     message: r => "We've missed you. R" + r.amount + " is waiting in your loyalty wallet — pop in before {expiry}.",
   },
   {
     id: 'recover-churned',
     badge: 'Win-back', priority: 95,
     audienceLabel: 'churned customers',
-    audienceFilter: c => inSegment(c, 'churned'),
+    audienceFilter: (c) => inSegment(c, 'churned'),
     title: n => 'Recover ' + n + ' lapsed high-value customers',
     desc:  "They've been quiet for 60+ days but had real spend with you — a bold offer is the best chance to bring them back.",
-    reward: { trigger:'instant', amount:40, expiryDays:14 },
+    buildReward: cal => ({ trigger:'instant', amount: cal.rewardLarge, expiryDays: cal.expiryMedium }),
     message: r => "Long time no see — R" + r.amount + " is in your loyalty wallet. Come back before {expiry} to spend it.",
   },
   {
     id: 'convert-first-time',
     badge: 'Growth', priority: 90,
     audienceLabel: 'first-time customers',
-    audienceFilter: c => c.visits <= 2 && c.joinedDaysAgo <= 60,
+    audienceFilter: (c) => c.visits <= 2 && c.joinedDaysAgo <= 60,
     title: n => 'Convert ' + n + ' first-time customers into repeat visitors',
     desc:  'The crucial second-visit window — they tried you once. Lock in the habit before the brand fades from memory.',
-    reward: { trigger:'min-spend', amount:15, minSpend:60, expiryDays:14 },
+    buildReward: cal => ({ trigger:'min-spend', amount: cal.rewardSmall, minSpend: cal.minSpendEntry, expiryDays: cal.expiryMedium }),
     message: r => "Loved your first visit? Spend R" + r.minSpend + "+ on your next shop before {expiry} and we'll drop R" + r.amount + " into your loyalty wallet.",
   },
   {
     id: 'promote-to-vip',
     badge: 'Growth', priority: 80,
     audienceLabel: 'rising customers',
-    audienceFilter: c => inSegment(c, 'growing') && c.visits >= 5,
+    audienceFilter: (c) => inSegment(c, 'growing') && c.visits >= 5,
     title: n => 'Promote ' + n + ' customers approaching VIP status',
     desc:  "They're building real momentum — one strong shop tips them into your highest-value tier and the bigger lifetime value that comes with it.",
-    reward: { trigger:'min-spend', amount:25, minSpend:100, expiryDays:14 },
+    buildReward: cal => ({ trigger:'min-spend', amount: cal.rewardMedium, minSpend: cal.minSpendTierUp, expiryDays: cal.expiryMedium }),
     message: r => "You're close to unlocking VIP. Spend R" + r.minSpend + "+ on your next shop before {expiry} and earn an extra R" + r.amount + " in your loyalty wallet.",
   },
   {
     id: 'reward-vip-thank',
     badge: 'Retention', priority: 75,
     audienceLabel: 'top customers',
-    audienceFilter: c => inSegment(c, 'vip'),
+    audienceFilter: (c) => inSegment(c, 'vip'),
     title: n => 'Thank your ' + n + ' most valuable customers',
     desc:  'VIPs defect quietly — a recognition top-up reinforces the relationship before a competitor lures them away.',
-    reward: { trigger:'instant', amount:50, expiryDays:30 },
+    buildReward: cal => ({ trigger:'instant', amount: cal.rewardLarge, expiryDays: cal.expiryLong }),
     message: r => "Thank you for being one of our top customers. R" + r.amount + " is loaded into your loyalty wallet — see you soon.",
   },
   {
     id: 'slow-day-thursday',
     badge: 'Growth', priority: 60,
     audienceLabel: 'active customers',
-    audienceFilter: c => inSegment(c, 'active') && c.visits >= 4,
+    audienceFilter: (c) => inSegment(c, 'active') && c.visits >= 4,
     title: n => 'Drive Thursday footfall with ' + n + ' active customers',
     desc:  'Smooth out the week — convert weekend habits into mid-week visits and recover unused capacity on quieter days.',
-    reward: { trigger:'day', amount:20, day:'Thursday', expiryDays:14 },
+    buildReward: cal => ({ trigger:'day', amount: cal.rewardMedium, day:'Thursday', expiryDays: cal.expiryMedium }),
     message: r => "Shop with us on any " + r.day + " before {expiry} and earn an extra R" + r.amount + " in your loyalty wallet.",
   },
 ];
@@ -3492,13 +3553,17 @@ const AI_REC_TEMPLATES = [
 const MIN_AI_AUDIENCE = 3; // templates with fewer than this match are dropped
 
 // Score the live customer set against every template, return the top 3
-// (priority-weighted, sufficient-audience).
+// (priority-weighted, sufficient-audience). Calibration is computed once
+// per call so every recommendation reflects the latest merchant fingerprint.
 function buildAiRecommendations() {
+  const cal = calibrateMerchant(CUSTOMERS);
+  _merchantCal = cal;
   const candidates = [];
   for (const t of AI_REC_TEMPLATES) {
-    const audience = CUSTOMERS.filter(t.audienceFilter);
+    const audience = CUSTOMERS.filter(c => t.audienceFilter(c, cal));
     if (audience.length < MIN_AI_AUDIENCE) continue;
-    candidates.push({ ...t, audience });
+    const reward = t.buildReward(cal);
+    candidates.push({ ...t, audience, reward });
   }
   candidates.sort((a, b) => b.priority - a.priority);
   return candidates.slice(0, 3);
@@ -3561,6 +3626,13 @@ function renderAiRecommendations() {
   if (meta) {
     meta.textContent = 'Refreshed ' + new Date().toLocaleDateString('en-ZA',
       { day:'numeric', month:'short' });
+  }
+
+  // Calibration footnote — shows the merchant the engine adapted to THEIR data.
+  const tuning = document.getElementById('aiRecsTuning');
+  if (tuning && _merchantCal) {
+    tuning.textContent = 'Tuned to your data: ~R' + _merchantCal.medianBasket +
+      ' typical basket · ' + _merchantCal.medianCycle + '-day median visit cycle';
   }
 }
 
