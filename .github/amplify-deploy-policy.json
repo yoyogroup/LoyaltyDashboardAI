@@ -11,10 +11,7 @@
         "amplify:GetApp",
         "amplify:GetBranch"
       ],
-      "Resource": [
-        "arn:aws:amplify:eu-west-1:*:apps/*/branches/main",
-        "arn:aws:amplify:eu-west-1:*:apps/*/branches/main/jobs/*"
-      ]
+      "Resource": "arn:aws:amplify:eu-west-1:058264502468:apps/dhkbfcjpjavcy/*"
     }
   ]
 }
