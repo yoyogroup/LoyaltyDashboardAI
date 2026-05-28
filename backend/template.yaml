@@ -10,8 +10,10 @@ Description: >
 Parameters:
   AllowedOrigin:
     Type: String
-    Default: https://yoyogroup.github.io
-    Description: CORS origin that may call this API (the deployed front-end URL).
+    Default: https://main.dhkbfcjpjavcy.amplifyapp.com
+    Description: >
+      Primary CORS origin that may call this API (the deployed front-end URL).
+      Set to the Amplify URL or custom domain (e.g. https://loyalty.yoyogroup.com).
 
   AllowedDomainsCsv:
     Type: String

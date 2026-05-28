@@ -1,12 +1,19 @@
-name: Deploy to GitHub Pages
+name: Deploy to AWS Amplify
 
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'backend/**'
+      - '.kiro/**'
+      - '*.md'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+env:
+  AWS_REGION: eu-west-1
 
 jobs:
   deploy:
@@ -15,34 +22,79 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Publish static files to gh-pages
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Package frontend
+        run: |
+          # Create a zip containing only the static frontend files
+          zip -r site.zip index.html login.html assets/ \
+            --exclude "assets/.DS_Store"
+
+      - name: Deploy to Amplify
         run: |
           set -e
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Build gh-pages INCREMENTALLY on top of its existing history using a
-          # worktree — no orphan branch, no --force. The previous orphan+force
-          # approach intermittently failed with GitHub's "fatal error in
-          # commit_refs" because it replaced the whole history on every deploy.
-          git fetch origin gh-pages || true
-          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
-            git worktree add -B gh-pages /tmp/ghp origin/gh-pages
-          else
-            git worktree add --orphan -b gh-pages /tmp/ghp   # first-ever deploy
-          fi
+          APP_ID="${{ secrets.AMPLIFY_APP_ID }}"
+          BRANCH="main"
 
-          # Refresh the published files (backend/ is intentionally excluded —
-          # it's deployed via SAM, not Pages).
-          rm -rf /tmp/ghp/assets /tmp/ghp/index.html /tmp/ghp/login.html
-          cp index.html login.html /tmp/ghp/
-          cp -r assets /tmp/ghp/
+          # Create a new deployment and get the upload URL + job ID
+          DEPLOYMENT=$(aws amplify create-deployment \
+            --app-id "$APP_ID" \
+            --branch-name "$BRANCH" \
+            --output json)
 
-          cd /tmp/ghp
-          git add index.html login.html assets/
-          if git diff --staged --quiet; then
-            echo "No changes to publish."
-            exit 0
-          fi
-          git commit -m "deploy: update GitHub Pages $(date -u '+%Y-%m-%d %H:%M UTC')"
-          git push origin gh-pages
+          JOB_ID=$(echo "$DEPLOYMENT" | jq -r '.jobId')
+          UPLOAD_URL=$(echo "$DEPLOYMENT" | jq -r '.zipUploadUrl')
+
+          echo "Job ID: $JOB_ID"
+
+          # Upload the zip to the pre-signed S3 URL
+          curl --fail --silent --show-error \
+            -H "Content-Type: application/zip" \
+            --upload-file site.zip \
+            "$UPLOAD_URL"
+
+          # Start the deployment
+          aws amplify start-deployment \
+            --app-id "$APP_ID" \
+            --branch-name "$BRANCH" \
+            --job-id "$JOB_ID"
+
+          echo "✅ Deployment started (job $JOB_ID)"
+
+      - name: Wait for deployment to complete
+        run: |
+          set -e
+
+          APP_ID="${{ secrets.AMPLIFY_APP_ID }}"
+          BRANCH="main"
+
+          # Poll until the job finishes (timeout after 3 minutes)
+          for i in $(seq 1 36); do
+            STATUS=$(aws amplify get-job \
+              --app-id "$APP_ID" \
+              --branch-name "$BRANCH" \
+              --job-id "$JOB_ID" \
+              --query 'job.summary.status' \
+              --output text 2>/dev/null || echo "PENDING")
+
+            echo "  [$i] Status: $STATUS"
+
+            if [ "$STATUS" = "SUCCEED" ]; then
+              echo "✅ Deployment complete"
+              exit 0
+            elif [ "$STATUS" = "FAILED" ] || [ "$STATUS" = "CANCELLED" ]; then
+              echo "❌ Deployment failed with status: $STATUS"
+              exit 1
+            fi
+
+            sleep 5
+          done
+
+          echo "⏱️ Timed out waiting for deployment"
+          exit 1

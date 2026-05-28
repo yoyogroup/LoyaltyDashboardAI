@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Yoyo Loyalty Portal — frontend hosting via AWS Amplify.
+  Serves the static portal (index.html, login.html, assets/) over HTTPS
+  with CloudFront CDN. Deployed by GitHub Actions on push to main.
+
+# ─────────────────────────────────────────────────────────────────────
+# Parameters
+# ─────────────────────────────────────────────────────────────────────
+Parameters:
+  AppName:
+    Type: String
+    Default: yoyo-loyalty-portal
+    Description: Name of the Amplify app (visible in the AWS console).
+
+  # Custom domain — leave blank to skip domain setup.
+  # When ready, set to loyalty.yoyogroup.com and deploy.
+  CustomDomain:
+    Type: String
+    Default: ''
+    Description: >
+      Custom domain for the portal (e.g. loyalty.yoyogroup.com).
+      Leave empty to use the default *.amplifyapp.com URL.
+
+# ─────────────────────────────────────────────────────────────────────
+# Conditions
+# ─────────────────────────────────────────────────────────────────────
+Conditions:
+  HasCustomDomain: !Not [!Equals [!Ref CustomDomain, '']]
+
+# ─────────────────────────────────────────────────────────────────────
+# Resources
+# ─────────────────────────────────────────────────────────────────────
+Resources:
+
+  # ─── Amplify App ──────────────────────────────────────────────────
+  # Manual deployments only (no Amplify-managed builds). GitHub Actions
+  # uploads a zip and triggers the deploy via the Amplify API.
+  AmplifyApp:
+    Type: AWS::Amplify::App
+    Properties:
+      Name: !Ref AppName
+      Description: Yoyo Loyalty Portal — merchant dashboard
+      Platform: WEB                   # Static hosting (no SSR)
+      # Custom response headers — security hardening at CDN level
+      CustomHeaders: |
+        customHeaders:
+          - pattern: '**/*'
+            headers:
+              - key: Strict-Transport-Security
+                value: 'max-age=31536000; includeSubDomains'
+              - key: X-Content-Type-Options
+                value: 'nosniff'
+              - key: X-Frame-Options
+                value: 'DENY'
+              - key: Referrer-Policy
+                value: 'strict-origin-when-cross-origin'
+              - key: Permissions-Policy
+                value: 'camera=(), microphone=(), geolocation=()'
+      # Rewrite rules — SPA-style fallback for unknown paths
+      CustomRules:
+        - Source: /<*>
+          Target: /login.html
+          Status: '404-200'
+
+  # ─── Branch: main (production) ───────────────────────────────────
+  AmplifyBranch:
+    Type: AWS::Amplify::Branch
+    Properties:
+      AppId: !GetAtt AmplifyApp.AppId
+      BranchName: main
+      Description: Production branch — deployed by GitHub Actions
+      EnableAutoBuild: false          # We trigger deploys from GH Actions
+      Stage: PRODUCTION
+      Framework: Web
+
+  # ─── Custom Domain (conditional) ─────────────────────────────────
+  AmplifyDomain:
+    Type: AWS::Amplify::Domain
+    Condition: HasCustomDomain
+    Properties:
+      AppId: !GetAtt AmplifyApp.AppId
+      DomainName: !Ref CustomDomain
+      SubDomainSettings:
+        - BranchName: main
+          Prefix: ''                  # root domain (loyalty.yoyogroup.com)
+      # Amplify auto-provisions and renews the ACM certificate.
+      # You just need to add the CNAME records it provides to your DNS.
+
+# ─────────────────────────────────────────────────────────────────────
+# Outputs
+# ─────────────────────────────────────────────────────────────────────
+Outputs:
+  AmplifyAppId:
+    Description: >
+      Amplify App ID — store this as the AMPLIFY_APP_ID secret in GitHub Actions.
+    Value: !GetAtt AmplifyApp.AppId
+
+  AmplifyDefaultDomain:
+    Description: Default Amplify URL (use until custom domain is configured).
+    Value: !Sub https://main.${AmplifyApp.DefaultDomain}
+
+  AmplifyAppArn:
+    Description: Amplify App ARN (for IAM policies).
+    Value: !GetAtt AmplifyApp.Arn
+
+  CustomDomainUrl:
+    Condition: HasCustomDomain
+    Description: Custom domain URL.
+    Value: !Sub https://${CustomDomain}

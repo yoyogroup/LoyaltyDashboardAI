@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AmplifyDeploy",
+      "Effect": "Allow",
+      "Action": [
+        "amplify:CreateDeployment",
+        "amplify:StartDeployment",
+        "amplify:GetJob",
+        "amplify:GetApp",
+        "amplify:GetBranch"
+      ],
+      "Resource": [
+        "arn:aws:amplify:eu-west-1:*:apps/*/branches/main",
+        "arn:aws:amplify:eu-west-1:*:apps/*/branches/main/jobs/*"
+      ]
+    }
+  ]
+}
