@@ -3632,7 +3632,7 @@ function renderAiRecommendations() {
   const tuning = document.getElementById('aiRecsTuning');
   if (tuning && _merchantCal) {
     tuning.textContent = 'Tuned to your data: ~R' + _merchantCal.medianBasket +
-      ' typical basket · ' + _merchantCal.medianCycle + '-day median visit cycle';
+      ' average basket value · ' + _merchantCal.medianCycle + '-day average visit frequency';
   }
 }
 
