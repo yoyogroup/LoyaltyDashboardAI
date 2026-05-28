@@ -3393,6 +3393,32 @@ function renderCampStep4() {
 // the merchant tweaks and sends in one click.
 const AI_REC_TEMPLATES = [
   {
+    id: 'next-visit-accelerator',
+    badge: 'Growth', priority: 110, // top play — prevention beats recovery
+    audienceLabel: 'overdue regulars',
+    // Personal-cadence intervention: infer each customer's natural cycle
+    // (joinedDaysAgo ÷ visits-1) and fire ONLY when they're at 0.85×–1.6×
+    // of that cycle — past their rhythm, but not yet "lapsed" (those are
+    // handled by win-back / churned plays).
+    audienceFilter: c => {
+      if (c.visits < 2) return false;                         // need ≥2 visits to infer rhythm
+      if (c.joinedDaysAgo < 30) return false;                 // need history for a reliable estimate
+      if (inSegment(c, 'slipping') || inSegment(c, 'churned')) return false;
+      const lvd = lastVisitDaysFromText(c.lastVisit);
+      if (lvd === Infinity) return false;
+      const cycle = c.joinedDaysAgo / Math.max(1, c.visits - 1);
+      // Cycle floor: 1.5d covers coffee-rhythm customers (1–3d) but excludes
+      // sub-daily noise (multi-shop-per-day edge cases). Ceiling 60d skips
+      // sporadic shoppers whose "rhythm" isn't reliable.
+      if (cycle < 1.5 || cycle > 60) return false;
+      return lvd >= cycle * 0.85 && lvd <= cycle * 1.8;       // at-or-past their rhythm, before lapse threshold
+    },
+    title: n => 'Pull ' + n + ' customers back before they slip their rhythm',
+    desc:  'These customers are right at the edge of their personal return cycle. Intervene now — before they cool — and you compress repeat frequency instead of paying to recover churn later.',
+    reward: { trigger:'min-spend', amount:15, minSpend:60, expiryDays:7 },
+    message: r => 'R' + r.amount + " is reserved in your loyalty wallet — spend R" + r.minSpend + "+ before {expiry} and it's yours. Your usual visit is a little overdue.",
+  },
+  {
     id: 'win-back-slipping',
     badge: 'Win-back', priority: 100,
     audienceLabel: 'lapsed regulars',
