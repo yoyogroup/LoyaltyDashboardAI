@@ -36,6 +36,7 @@ jobs:
             --exclude "assets/.DS_Store"
 
       - name: Deploy to Amplify
+        id: deploy
         run: |
           set -e
 
@@ -52,6 +53,7 @@ jobs:
           UPLOAD_URL=$(echo "$DEPLOYMENT" | jq -r '.zipUploadUrl')
 
           echo "Job ID: $JOB_ID"
+          echo "job_id=$JOB_ID" >> "$GITHUB_OUTPUT"
 
           # Upload the zip to the pre-signed S3 URL
           curl --fail --silent --show-error \
@@ -73,6 +75,9 @@ jobs:
 
           APP_ID="${{ secrets.AMPLIFY_APP_ID }}"
           BRANCH="main"
+          JOB_ID="${{ steps.deploy.outputs.job_id }}"
+
+          echo "Waiting for job $JOB_ID to complete..."
 
           # Poll until the job finishes (timeout after 3 minutes)
           for i in $(seq 1 36); do

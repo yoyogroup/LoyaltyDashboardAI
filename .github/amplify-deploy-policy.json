@@ -7,11 +7,15 @@
       "Action": [
         "amplify:CreateDeployment",
         "amplify:StartDeployment",
+        "amplify:StopJob",
         "amplify:GetJob",
         "amplify:GetApp",
         "amplify:GetBranch"
       ],
-      "Resource": "arn:aws:amplify:eu-west-1:058264502468:apps/dhkbfcjpjavcy/*"
+      "Resource": [
+        "arn:aws:amplify:eu-west-1:058264502468:apps/dhkbfcjpjavcy",
+        "arn:aws:amplify:eu-west-1:058264502468:apps/dhkbfcjpjavcy/*"
+      ]
     }
   ]
 }
