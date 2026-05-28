@@ -2099,7 +2099,7 @@ const SEG_DISPLAY_ORDER = ['vip', 'active', 'growing', 'new', 'slipping', 'churn
 // SEGMENT_RULES is a deep-cloned working copy — the edit modal mutates this.
 const DEFAULT_RULES = {
   new:      { type: 'joined-within',    days: 30 },
-  vip:      { type: 'spend-visits',     minSpend: 1000, minVisits: 10 },
+  vip:      { type: 'top-pct',          pct: 20 },
   active:   { type: 'visited-within',   days: 30 },
   growing:  { type: 'growing-default',  minVisits: 5, maxSpend: 1000, maxLastVisit: 30 },
   slipping: { type: 'no-visit-between', minDays: 30, maxDays: 60 },
@@ -2133,6 +2133,8 @@ function describeRule(seg) {
       return 'R' + r.minSpend.toLocaleString('en-ZA') + '+ spend · ' + r.minVisits + '+ visits';
     case 'top-n':
       return 'Top ' + r.n + ' customers by spend';
+    case 'top-pct':
+      return 'Top ' + r.pct + '% of customers by spend';
     case 'growing-default':
       return r.minVisits + '+ visits in last ' + r.maxLastVisit + ' days · under R' + r.maxSpend.toLocaleString('en-ZA');
     case 'no-visit-between':
@@ -2153,6 +2155,7 @@ function customerMatches(c, seg) {
     case 'visited-within':   return lvd <= r.days;
     case 'spend-visits':     return c.spend >= r.minSpend && c.visits >= r.minVisits;
     case 'top-n':            return c._spendRank != null && c._spendRank <= r.n;
+    case 'top-pct':          return c._spendRank != null && c._spendRank <= Math.max(1, Math.ceil(CUSTOMERS.length * r.pct / 100));
     case 'growing-default':  return c.visits >= r.minVisits && c.spend < r.maxSpend && lvd <= r.maxLastVisit;
     case 'no-visit-between': return lvd >= r.minDays && lvd <= r.maxDays;
     case 'no-visit-since':   return lvd > r.days;
@@ -2547,20 +2550,23 @@ function renderSegmentForm() {
       break;
 
     case 'vip': {
-      // Radio: choose rule type
+      // Radio: choose rule type (three options for VIP)
       body.appendChild(buildRadioGroup([
-        { value:'spend-visits', label:'Spend & visit threshold',
-          hint:'Customer must meet BOTH a minimum spend and a minimum visit count.' },
+        { value:'top-pct', label:'Top % of customers by spend',
+          hint:'Tag the highest-spending slice of your member base — auto-adjusts as the base grows.' },
         { value:'top-n', label:'Top N customers by spend',
           hint:'Always tag the highest N spenders, regardless of count.' },
+        { value:'spend-visits', label:'Spend & visit threshold',
+          hint:'Customer must meet BOTH a minimum spend and a minimum visit count.' },
       ], draft.type, newType => {
         // Switch rule types — set sensible defaults for the new shape
+        Object.keys(draft).forEach(k => delete draft[k]);
         if (newType === 'spend-visits') {
-          Object.keys(draft).forEach(k => delete draft[k]);
           Object.assign(draft, { type:'spend-visits', minSpend:1000, minVisits:10 });
-        } else {
-          Object.keys(draft).forEach(k => delete draft[k]);
+        } else if (newType === 'top-n') {
           Object.assign(draft, { type:'top-n', n:10 });
+        } else {
+          Object.assign(draft, { type:'top-pct', pct:20 });
         }
         renderSegmentForm();
         updateSegEditPreview();
@@ -2578,12 +2584,19 @@ function renderSegmentForm() {
           onChange:v => { draft.minVisits = v; updateSegEditPreview(); },
         }));
         body.appendChild(row);
-      } else {
+      } else if (draft.type === 'top-n') {
         body.appendChild(buildSelectField({
           label:'Top N customers',
           value:draft.n,
           options:[{v:5,t:'Top 5'},{v:10,t:'Top 10'},{v:20,t:'Top 20'},{v:50,t:'Top 50'}],
           onChange:v => { draft.n = v; updateSegEditPreview(); },
+        }));
+      } else {
+        body.appendChild(buildSelectField({
+          label:'Top % of customers',
+          value:draft.pct,
+          options:[{v:5,t:'Top 5%'},{v:10,t:'Top 10%'},{v:15,t:'Top 15%'},{v:20,t:'Top 20%'},{v:25,t:'Top 25%'},{v:30,t:'Top 30%'}],
+          onChange:v => { draft.pct = v; updateSegEditPreview(); },
         }));
       }
       break;
