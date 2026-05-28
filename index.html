@@ -252,6 +252,102 @@
     @keyframes pulse { 0%,100%{box-shadow:0 0 0 2px rgba(37,211,102,0.3)} 50%{box-shadow:0 0 0 4px rgba(37,211,102,0.15)} }
     .wa-text { color:rgba(255,255,255,0.6); font-size:11.5px; }
 
+    /* ── AI RECOMMENDED ACTIONS ── */
+    .ai-recs {
+      background:linear-gradient(135deg, rgba(255,87,50,0.06), rgba(105,157,169,0.06));
+      border:1px solid var(--border); border-radius:20px;
+      padding:22px 24px; margin-bottom:20px;
+      position:relative; overflow:hidden;
+    }
+    .ai-recs-head {
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:16px; margin-bottom:16px; flex-wrap:wrap;
+    }
+    .ai-recs-title {
+      display:flex; align-items:center; gap:9px;
+      font-size:16px; font-weight:800; color:var(--navy); letter-spacing:-0.01em;
+    }
+    .ai-sparkle {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:26px; height:26px; border-radius:8px;
+      background:linear-gradient(135deg, var(--orange) 0%, var(--teal) 100%);
+      color:white; box-shadow:0 2px 8px rgba(255,87,50,0.25);
+    }
+    .ai-sparkle svg { width:14px; height:14px; }
+    .ai-recs-sub {
+      font-size:12.5px; color:var(--slate); margin-top:5px;
+      max-width:600px; line-height:1.5;
+    }
+    .ai-recs-meta {
+      font-size:11px; color:var(--slate-lt); white-space:nowrap;
+      background:white; border:1px solid var(--border); border-radius:14px;
+      padding:5px 11px; font-weight:600;
+    }
+    .ai-recs-grid {
+      display:grid; grid-template-columns:repeat(3, 1fr); gap:14px;
+    }
+    @media (max-width:860px) { .ai-recs-grid { grid-template-columns:1fr; } }
+
+    .ai-rec {
+      background:white; border:1px solid var(--border); border-radius:14px;
+      padding:18px; display:flex; flex-direction:column;
+      transition:transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+    .ai-rec:hover {
+      transform:translateY(-2px);
+      box-shadow:0 6px 20px rgba(15,30,53,0.07);
+      border-color:var(--slate-lt);
+    }
+    .ai-rec-badge {
+      align-self:flex-start; font-size:10px; font-weight:700;
+      text-transform:uppercase; letter-spacing:0.7px;
+      padding:3px 9px; border-radius:12px; margin-bottom:11px;
+    }
+    .ai-rec-badge.win-back  { background:#FEE2E2; color:#991B1B; }
+    .ai-rec-badge.growth    { background:#FEF3C7; color:#92400E; }
+    .ai-rec-badge.retention { background:#D1FAE5; color:#065F46; }
+    .ai-rec-title {
+      font-size:15px; font-weight:800; color:var(--navy);
+      letter-spacing:-0.01em; line-height:1.3; margin-bottom:8px;
+    }
+    .ai-rec-desc {
+      font-size:12.5px; color:var(--slate); line-height:1.5;
+      margin-bottom:12px; flex:1;
+    }
+    .ai-rec-offer {
+      background:var(--bg); border-radius:9px;
+      padding:9px 12px; font-size:12px; color:var(--navy); font-weight:600;
+      margin-bottom:10px; line-height:1.4;
+    }
+    .ai-rec-offer-label {
+      display:block; font-size:10px; font-weight:700; color:var(--slate);
+      text-transform:uppercase; letter-spacing:0.7px; margin-bottom:2px;
+    }
+    .ai-rec-stats {
+      display:flex; gap:8px; margin-bottom:13px; flex-wrap:wrap;
+    }
+    .ai-rec-stat {
+      flex:1; min-width:0; font-size:11.5px; color:var(--slate);
+      background:var(--bg); border-radius:8px; padding:7px 10px;
+      display:flex; flex-direction:column; gap:1px;
+    }
+    .ai-rec-stat .v { color:var(--navy); font-weight:800; font-size:13.5px; letter-spacing:-0.01em; }
+    .ai-rec-stat .l { font-size:10px; color:var(--slate-lt); text-transform:uppercase; letter-spacing:0.6px; font-weight:600; }
+    .ai-rec-btn {
+      background:var(--orange); color:white; border:none; border-radius:10px;
+      padding:10px 14px; font-size:13px; font-weight:700;
+      cursor:pointer; transition:background 0.15s;
+      display:inline-flex; align-items:center; justify-content:center; gap:6px;
+      font-family:inherit;
+    }
+    .ai-rec-btn:hover { background:var(--orange-lt); }
+    .ai-rec-btn svg { width:13px; height:13px; }
+    .ai-rec-empty {
+      grid-column:1 / -1; padding:24px; text-align:center;
+      color:var(--slate); font-size:13px;
+      background:white; border-radius:12px;
+    }
+
     /* ── KPI GRID ── */
     .kpi-grid {
       display:grid; grid-template-columns:repeat(3,1fr);
@@ -1002,6 +1098,25 @@
           <div class="hero-stat-label">Active Loyalty<br>Members</div>
         </div>
       </div>
+    </div>
+
+    <!-- ═══════════════════ AI RECOMMENDED ACTIONS ═══════════════════
+         Daily-refreshed top 3 growth actions computed from live data by
+         the recommendation engine (renderAiRecommendations / activateAiRecommendation). -->
+    <div class="ai-recs" id="aiRecs">
+      <div class="ai-recs-head">
+        <div>
+          <div class="ai-recs-title">
+            <span class="ai-sparkle" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 1.5l1.65 5.32a2 2 0 001.3 1.3L18.5 10l-5.55 1.88a2 2 0 00-1.3 1.3L10 18.5l-1.65-5.32a2 2 0 00-1.3-1.3L1.5 10l5.55-1.88a2 2 0 001.3-1.3L10 1.5z"/></svg>
+            </span>
+            AI Recommended Actions
+          </div>
+          <div class="ai-recs-sub">The three highest-impact campaigns our engine identified from your latest data — refreshes as customer behaviour changes.</div>
+        </div>
+        <div class="ai-recs-meta" id="aiRecsMeta">Refreshed today</div>
+      </div>
+      <div class="ai-recs-grid" id="aiRecsGrid"></div>
     </div>
 
     <!-- KPI GRID -->
@@ -2498,6 +2613,7 @@ function saveSegmentEditor() {
   updateSegmentCounts();
   renderCustomers(currentSegment);
   updateCustSubtitle(currentSegment);
+  renderAiRecommendations(); // rule changes shift audiences → re-rank recs
   showToast(SEGMENT_META[_segEditCurrent].label + ' segment updated');
   closeSegmentEditor();
 }
@@ -2828,6 +2944,8 @@ let _campSelectedId = null;
 let _campReward = null;        // editable deep-clone of the chosen campaign's reward
 let _campMessage = '';         // editable WhatsApp message text
 let _campMessageDirty = false; // true once the merchant edits the message by hand
+let _campAiActive = false;     // true when the campaign modal was entered via an AI recommendation
+let _aiActiveRec = null;       // the AI recommendation currently being activated
 
 // Tiny DOM builder — XSS-safe (textContent / addEventListener, never innerHTML).
 function el(tag, props, ...children) {
@@ -2864,13 +2982,35 @@ function svgIcon(pathD) {
 }
 const ICON_USERS = 'M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z';
 const ICON_CHECK = 'M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z';
+const ICON_SEND  = 'M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z';
 
-function segLabel(seg) { return seg === 'all' ? 'All Customers' : SEGMENT_META[seg].label; }
+function segLabel(seg) {
+  if (seg === '__ai__' && _aiActiveRec) return _aiActiveRec.audienceLabel;
+  return seg === 'all' ? 'All Customers' : SEGMENT_META[seg].label;
+}
+// "8 first-time customers" vs "8 VIP customers" — for AI recs the label
+// already names the cohort (so no " customer(s)" suffix), for segments it
+// needs the suffix to read as a sentence.
+function audienceText() {
+  const label = segLabel(_campSeg);
+  if (_campAiActive) return _campAudience + ' ' + label;
+  return _campAudience + ' ' + label + ' customer' + (_campAudience === 1 ? '' : 's');
+}
 function segmentAudience(seg) {
   if (seg === 'all') return CUSTOMERS.length;
   return CUSTOMERS.filter(c => inSegment(c, seg)).length;
 }
 function currentCampaign() {
+  // AI-driven flow synthesises the campaign from the active recommendation.
+  if (_campAiActive && _aiActiveRec) {
+    const n = _aiActiveRec.audience.length;
+    return {
+      title: _aiActiveRec.title(n),
+      badge: _aiActiveRec.badge,
+      desc:  _aiActiveRec.desc,
+      reward: _aiActiveRec.reward,
+    };
+  }
   const list = CAMPAIGNS[_campSeg] || CAMPAIGNS.all;
   return list.find(c => c.id === _campSelectedId) || null;
 }
@@ -2936,6 +3076,8 @@ function fmtDateNice(iso) {
 }
 
 function openCampaignModal() {
+  _campAiActive = false;       // clean slate — not via AI rec
+  _aiActiveRec = null;
   _campSeg = currentSegment;
   _campAudience = segmentAudience(_campSeg);
   _campSelectedId = null;
@@ -2948,6 +3090,8 @@ function openCampaignModal() {
 }
 function closeCampaignModal() {
   document.getElementById('campaignBackdrop').hidden = true;
+  _campAiActive = false;
+  _aiActiveRec = null;
   _campSelectedId = null;
   _campReward = null;
   _campMessage = '';
@@ -3096,7 +3240,9 @@ function renderCampStep2() {
   footer.replaceChildren(
     el('div', { class:'seg-edit-preview', text: camp.title }),
     el('div', { class:'seg-edit-actions' },
-      el('button', { class:'btn btn-ghost', onClick: () => renderCampaignStep(1) }, 'Back'),
+      el('button', { class:'btn btn-ghost',
+        onClick: () => _campAiActive ? closeCampaignModal() : renderCampaignStep(1) },
+        _campAiActive ? 'Cancel' : 'Back'),
       el('button', { class:'btn btn-orange', onClick: () => renderCampaignStep(3) }, 'Continue')
     )
   );
@@ -3148,7 +3294,7 @@ function renderCampStep3() {
   const recap = el('div', { class:'campaign-recap' });
   const rows = [
     ['Campaign', camp.title],
-    ['Audience', _campAudience + ' ' + segLabel(_campSeg) + ' customer' + (_campAudience === 1 ? '' : 's')],
+    ['Audience', audienceText()],
     ['Channel', 'Outbound WhatsApp'],
     ['Reward', describeReward(_campReward)],
   ];
@@ -3214,8 +3360,7 @@ function renderCampStep4() {
   const wrap = el('div', { class:'campaign-success' },
     el('div', { class:'campaign-success-icon' }, svgIcon(ICON_CHECK)),
     el('h3', { text:'Campaign sent successfully' }),
-    el('p', { text:'Outbound WhatsApp sent to ' + _campAudience + ' ' + segLabel(_campSeg) +
-      ' customer' + (_campAudience === 1 ? '' : 's') + '.' })
+    el('p', { text:'Outbound WhatsApp sent to ' + audienceText() + '.' })
   );
   if (_campReward) {
     const line = _campReward.trigger === 'instant'
@@ -3234,6 +3379,172 @@ function renderCampStep4() {
       el('button', { class:'btn btn-primary', onClick: closeCampaignModal }, 'Back to dashboard')
     )
   );
+}
+
+// ═══════════════════ AI RECOMMENDATION ENGINE ═══════════════════
+// Each template describes a "growth play". On every render the engine
+// computes the audience for each play against the live customer set,
+// filters out anything thin (<3 customers), sorts by priority, and
+// surfaces the top 3. As customers churn / new sign-ups arrive / segments
+// shift, the surfaced recommendations naturally evolve.
+//
+// Activating a recommendation jumps the campaign modal straight into the
+// "Edit reward" step with the audience, reward, and message pre-filled —
+// the merchant tweaks and sends in one click.
+const AI_REC_TEMPLATES = [
+  {
+    id: 'win-back-slipping',
+    badge: 'Win-back', priority: 100,
+    audienceLabel: 'lapsed regulars',
+    audienceFilter: c => inSegment(c, 'slipping') && c.visits >= 3,
+    title: n => 'Win back ' + n + " customers who haven't returned in 30+ days",
+    desc:  'These were regular shoppers — a small nudge could re-anchor the habit before the gap becomes permanent.',
+    reward: { trigger:'instant', amount:20, expiryDays:7 },
+    message: r => "We've missed you. R" + r.amount + " is waiting in your loyalty wallet — pop in before {expiry}.",
+  },
+  {
+    id: 'recover-churned',
+    badge: 'Win-back', priority: 95,
+    audienceLabel: 'churned customers',
+    audienceFilter: c => inSegment(c, 'churned'),
+    title: n => 'Recover ' + n + ' lapsed high-value customers',
+    desc:  "They've been quiet for 60+ days but had real spend with you — a bold offer is the best chance to bring them back.",
+    reward: { trigger:'instant', amount:40, expiryDays:14 },
+    message: r => "Long time no see — R" + r.amount + " is in your loyalty wallet. Come back before {expiry} to spend it.",
+  },
+  {
+    id: 'convert-first-time',
+    badge: 'Growth', priority: 90,
+    audienceLabel: 'first-time customers',
+    audienceFilter: c => c.visits <= 2 && c.joinedDaysAgo <= 60,
+    title: n => 'Convert ' + n + ' first-time customers into repeat visitors',
+    desc:  'The crucial second-visit window — they tried you once. Lock in the habit before the brand fades from memory.',
+    reward: { trigger:'min-spend', amount:15, minSpend:60, expiryDays:14 },
+    message: r => "Loved your first visit? Spend R" + r.minSpend + "+ on your next shop before {expiry} and we'll drop R" + r.amount + " into your loyalty wallet.",
+  },
+  {
+    id: 'promote-to-vip',
+    badge: 'Growth', priority: 80,
+    audienceLabel: 'rising customers',
+    audienceFilter: c => inSegment(c, 'growing') && c.visits >= 5,
+    title: n => 'Promote ' + n + ' customers approaching VIP status',
+    desc:  "They're building real momentum — one strong shop tips them into your highest-value tier and the bigger lifetime value that comes with it.",
+    reward: { trigger:'min-spend', amount:25, minSpend:100, expiryDays:14 },
+    message: r => "You're close to unlocking VIP. Spend R" + r.minSpend + "+ on your next shop before {expiry} and earn an extra R" + r.amount + " in your loyalty wallet.",
+  },
+  {
+    id: 'reward-vip-thank',
+    badge: 'Retention', priority: 75,
+    audienceLabel: 'top customers',
+    audienceFilter: c => inSegment(c, 'vip'),
+    title: n => 'Thank your ' + n + ' most valuable customers',
+    desc:  'VIPs defect quietly — a recognition top-up reinforces the relationship before a competitor lures them away.',
+    reward: { trigger:'instant', amount:50, expiryDays:30 },
+    message: r => "Thank you for being one of our top customers. R" + r.amount + " is loaded into your loyalty wallet — see you soon.",
+  },
+  {
+    id: 'slow-day-thursday',
+    badge: 'Growth', priority: 60,
+    audienceLabel: 'active customers',
+    audienceFilter: c => inSegment(c, 'active') && c.visits >= 4,
+    title: n => 'Drive Thursday footfall with ' + n + ' active customers',
+    desc:  'Smooth out the week — convert weekend habits into mid-week visits and recover unused capacity on quieter days.',
+    reward: { trigger:'day', amount:20, day:'Thursday', expiryDays:14 },
+    message: r => "Shop with us on any " + r.day + " before {expiry} and earn an extra R" + r.amount + " in your loyalty wallet.",
+  },
+];
+
+const MIN_AI_AUDIENCE = 3; // templates with fewer than this match are dropped
+
+// Score the live customer set against every template, return the top 3
+// (priority-weighted, sufficient-audience).
+function buildAiRecommendations() {
+  const candidates = [];
+  for (const t of AI_REC_TEMPLATES) {
+    const audience = CUSTOMERS.filter(t.audienceFilter);
+    if (audience.length < MIN_AI_AUDIENCE) continue;
+    candidates.push({ ...t, audience });
+  }
+  candidates.sort((a, b) => b.priority - a.priority);
+  return candidates.slice(0, 3);
+}
+
+// Render the three recommendation cards. Idempotent — safe to call on init,
+// after rule edits, and whenever the customer set changes.
+function renderAiRecommendations() {
+  const grid = document.getElementById('aiRecsGrid');
+  if (!grid) return;
+  grid.replaceChildren();
+
+  const recs = buildAiRecommendations();
+  if (recs.length === 0) {
+    grid.appendChild(el('div', { class:'ai-rec-empty',
+      text:'As more customer activity flows through, the engine will surface targeted growth opportunities here.' }));
+    return;
+  }
+
+  for (const rec of recs) {
+    const n = rec.audience.length;
+    const expiryISO = defaultExpiryISO(rec.reward.expiryDays);
+    const previewReward = { ...rec.reward, expiryDate: expiryISO };
+    const offerText = describeReward(previewReward);
+
+    // Potential reach = audience × their average basket — the addressable
+    // shop value if everyone in the audience comes in once.
+    const reach = rec.audience.reduce((a, c) => a + (c.basket || 0), 0);
+    const reachR = 'R' + Math.round(reach).toLocaleString('en-ZA');
+
+    const card = el('div', { class:'ai-rec' },
+      el('div', { class:'ai-rec-badge ' + rec.badge.toLowerCase().replace(/[^a-z]/g, '-'),
+        text: rec.badge }),
+      el('div', { class:'ai-rec-title', text: rec.title(n) }),
+      el('div', { class:'ai-rec-desc', text: rec.desc }),
+      el('div', { class:'ai-rec-offer' },
+        el('span', { class:'ai-rec-offer-label', text:'Suggested offer' }),
+        el('span', { text: offerText })
+      ),
+      el('div', { class:'ai-rec-stats' },
+        el('div', { class:'ai-rec-stat' },
+          el('span', { class:'v', text: String(n) }),
+          el('span', { class:'l', text:'Customers' })
+        ),
+        el('div', { class:'ai-rec-stat' },
+          el('span', { class:'v', text: reachR }),
+          el('span', { class:'l', text:'Potential reach' })
+        )
+      ),
+      el('button', { class:'ai-rec-btn',
+        onClick: () => activateAiRecommendation(rec) },
+        svgIcon(ICON_SEND), 'Activate campaign'
+      )
+    );
+    grid.appendChild(card);
+  }
+
+  // Refreshed-stamp gives the merchant confidence this is up-to-date.
+  const meta = document.getElementById('aiRecsMeta');
+  if (meta) {
+    meta.textContent = 'Refreshed ' + new Date().toLocaleDateString('en-ZA',
+      { day:'numeric', month:'short' });
+  }
+}
+
+// Open the campaign modal directly at the Edit step with the AI rec's
+// audience, reward, and message pre-loaded.
+function activateAiRecommendation(rec) {
+  _aiActiveRec = rec;
+  _campAiActive = true;
+  _campSeg = '__ai__';
+  _campAudience = rec.audience.length;
+  _campSelectedId = '__ai__';
+  _campReward = JSON.parse(JSON.stringify(rec.reward));
+  _campReward.expiryDate = defaultExpiryISO(_campReward.expiryDays);
+  _campMessage = rec.message(_campReward).replace('{expiry}', fmtDateNice(_campReward.expiryDate));
+  _campMessageDirty = false;
+  document.getElementById('campaignTitle').textContent = 'AI Action · ' + rec.audienceLabel;
+  renderCampaignStep(2);
+  document.getElementById('campaignBackdrop').hidden = false;
+  window.scrollTo(0, 0);
 }
 
 // ═══════════════════ CUSTOMER DETAIL ═══════════════════
@@ -3501,10 +3812,11 @@ function showToast(msg) {
 // ═══════════════════ INIT ═══════════════════
 document.addEventListener('DOMContentLoaded', () => {
   Chart.defaults.font.family = 'Inter';
-  applyMerchantBranding();   // swap in real merchant identity (if MERCHANT_DATA present)
-  initStoreSelector();       // build store dropdown from real stores
+  applyMerchantBranding();    // swap in real merchant identity (if MERCHANT_DATA present)
+  initStoreSelector();        // build store dropdown from real stores
   initCharts('30D');
-  initSegmentFilter();
+  initSegmentFilter();        // also runs recomputeAllSegments() → segments are ready
+  renderAiRecommendations();  // top 3 growth actions from the live data
   initUserPill();
   initProfiles();
 });
