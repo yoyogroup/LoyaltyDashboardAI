@@ -22,7 +22,7 @@ Parameters:
 
   ResendFromEmail:
     Type: String
-    Default: no-reply@yoyogroup.com
+    Default: no-reply@signin.yoyogroup.com
     Description: >
       The 'From' address for OTP emails. The domain MUST be verified in your
       Resend account (DNS records published).

@@ -12,10 +12,8 @@
 
 window.YOYO_CONFIG = Object.freeze({
   // Master switch for the auth wall.
-  // HELD AT false: backend is deployed, but /auth/request-otp is currently
-  // returning 500 (OTP email send failing — see backend logs). Flip to true
-  // ONLY once request-otp returns 200, otherwise the portal locks everyone out.
-  AUTH_ENABLED: false,
+  // Backend is live and OTP emails are working. Auth wall is ON.
+  AUTH_ENABLED: true,
 
   // Live API Gateway base URL (SAM stack: yoyo-loyalty-portal, eu-west-1).
   apiBase: 'https://7ghddg7uji.execute-api.eu-west-1.amazonaws.com',
