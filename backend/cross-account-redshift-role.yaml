@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Cross-account IAM role for the Loyalty Dashboard (Sandbox account) to
+  query Redshift in the Data Integrations account via the Redshift Data API.
+  Deploy this stack in the Data Integrations account (603938032842).
+
+Parameters:
+  SandboxAccountId:
+    Type: String
+    Default: '058264502468'
+    Description: AWS account ID of the Sandbox account (where the Amplify app lives).
+
+  ExternalId:
+    Type: String
+    Default: 'yoyo-loyalty-redshift-access'
+    Description: External ID for additional security on the trust relationship.
+
+  RedshiftClusterIdentifier:
+    Type: String
+    Default: 'yoyo-datawarehouse-integrations'
+    Description: The Redshift cluster identifier to grant access to.
+
+  RedshiftDatabaseName:
+    Type: String
+    Default: 'cvs_loyalty_int'
+    Description: The Redshift database name.
+
+  RedshiftSchemaName:
+    Type: String
+    Default: 'loyalty'
+    Description: The Redshift schema to grant read access to.
+
+Resources:
+
+  # IAM Role that the Sandbox account's Lambda functions will assume
+  RedshiftDataApiReadRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: SandboxLoyaltyDashboardRedshiftRead
+      Description: >
+        Allows the Yoyo Loyalty Dashboard (Sandbox account) to query Redshift
+        via the Data API. Read-only access to the loyalty schema.
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${SandboxAccountId}:root'
+            Action: 'sts:AssumeRole'
+            Condition:
+              StringEquals:
+                'sts:ExternalId': !Ref ExternalId
+      Policies:
+        - PolicyName: RedshiftDataApiReadOnly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Allow executing statements and fetching results via Data API
+              - Sid: RedshiftDataApiAccess
+                Effect: Allow
+                Action:
+                  - 'redshift-data:ExecuteStatement'
+                  - 'redshift-data:BatchExecuteStatement'
+                  - 'redshift-data:DescribeStatement'
+                  - 'redshift-data:GetStatementResult'
+                  - 'redshift-data:ListStatements'
+                  - 'redshift-data:CancelStatement'
+                  - 'redshift-data:DescribeTable'
+                  - 'redshift-data:ListTables'
+                  - 'redshift-data:ListSchemas'
+                  - 'redshift-data:ListDatabases'
+                Resource: '*'
+              # Allow temporary credentials for the Data API to authenticate to Redshift
+              - Sid: RedshiftGetCredentials
+                Effect: Allow
+                Action:
+                  - 'redshift:GetClusterCredentialsWithIAM'
+                  - 'redshift:GetClusterCredentials'
+                Resource:
+                  - !Sub 'arn:aws:redshift:*:${AWS::AccountId}:cluster:${RedshiftClusterIdentifier}'
+                  - !Sub 'arn:aws:redshift:*:${AWS::AccountId}:dbname:${RedshiftClusterIdentifier}/${RedshiftDatabaseName}'
+                  - !Sub 'arn:aws:redshift:*:${AWS::AccountId}:dbuser:${RedshiftClusterIdentifier}/*'
+              # Describe cluster (needed by Data API for endpoint resolution)
+              - Sid: RedshiftDescribe
+                Effect: Allow
+                Action:
+                  - 'redshift:DescribeClusters'
+                Resource:
+                  - !Sub 'arn:aws:redshift:*:${AWS::AccountId}:cluster:${RedshiftClusterIdentifier}'
+
+Outputs:
+  CrossAccountRoleArn:
+    Description: >
+      ARN of the role that the Sandbox Lambda functions should assume.
+      Pass this to the team for use in their backend code.
+    Value: !GetAtt RedshiftDataApiReadRole.Arn
+    Export:
+      Name: SandboxLoyaltyDashboardRedshiftRoleArn
+
+  ExternalIdValue:
+    Description: External ID required when assuming this role.
+    Value: !Ref ExternalId

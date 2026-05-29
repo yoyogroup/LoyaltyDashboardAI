@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  IAM policy in the Sandbox account (058264502468) that grants Lambda execution
+  roles permission to assume the cross-account Redshift read role in the
+  Data Integrations account (603938032842).
+
+  NOTE: This stack is OPTIONAL. The QueryRedshiftFn in template.yaml already
+  includes the sts:AssumeRole permission inline. Use this stack only if you
+  need OTHER existing functions to also assume the cross-account role.
+
+Parameters:
+  DataIntegrationsAccountId:
+    Type: String
+    Default: '603938032842'
+    Description: AWS account ID of the Data Integrations account.
+
+  CrossAccountRoleName:
+    Type: String
+    Default: 'SandboxLoyaltyDashboardRedshiftRead'
+    Description: Name of the IAM role in the Data Integrations account to assume.
+
+  ExternalId:
+    Type: String
+    Default: 'yoyo-loyalty-redshift-access'
+    Description: External ID required when assuming the cross-account role.
+
+Resources:
+
+  # Policy that allows assuming the cross-account Redshift role
+  AssumeRedshiftRolePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: YoyoLoyaltyAssumeRedshiftRole
+      Description: >
+        Allows Lambda functions in this account to assume the
+        SandboxLoyaltyDashboardRedshiftRead role in the Data Integrations account.
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowAssumeRedshiftCrossAccountRole
+            Effect: Allow
+            Action: 'sts:AssumeRole'
+            Resource: !Sub 'arn:aws:iam::${DataIntegrationsAccountId}:role/${CrossAccountRoleName}'
+      # Attach to specific Lambda execution roles that need Redshift access.
+      # The QueryRedshiftFn already has this inline — add roles here only if
+      # other functions also need cross-account access.
+      Roles: []
+
+Outputs:
+  PolicyArn:
+    Description: ARN of the managed policy granting cross-account assume-role.
+    Value: !Ref AssumeRedshiftRolePolicy
+
+  UsageNote:
+    Description: How to use in Lambda code.
+    Value: !Sub >
+      In your Lambda, call STS AssumeRole with:
+        RoleArn: arn:aws:iam::${DataIntegrationsAccountId}:role/${CrossAccountRoleName}
+        ExternalId: ${ExternalId}
+      Then use the returned credentials with the Redshift Data API client.

@@ -295,6 +295,32 @@ Resources:
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: !Ref Nineteen58ApiKeySecret
 
+  # ─── Lambda: query-redshift (authenticated cross-account Redshift Data API) ─
+  # Verifies the caller's session JWT, assumes the cross-account role in the
+  # Data Integrations account, and executes read-only SQL via the Redshift Data API.
+  QueryRedshiftFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub yoyo-loyalty-query-redshift-${AWS::StackName}
+      CodeUri: src/
+      Handler: query-redshift.handler
+      Timeout: 29                    # Data API queries can take a few seconds
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: POST
+            Path: /data/query
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref JwtSigningSecret
+        - Statement:
+            - Sid: AllowAssumeRedshiftCrossAccountRole
+              Effect: Allow
+              Action: 'sts:AssumeRole'
+              Resource: !Sub 'arn:aws:iam::603938032842:role/SandboxLoyaltyDashboardRedshiftRead'
+
 # ─────────────────────────────────────────────────────────────────────
 # Outputs
 # ─────────────────────────────────────────────────────────────────────

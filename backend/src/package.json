@@ -6,7 +6,9 @@
   "description": "OTP + JWT auth Lambdas for the Yoyo Loyalty Portal.",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.658.0",
+    "@aws-sdk/client-redshift-data": "^3.658.0",
     "@aws-sdk/client-secrets-manager": "^3.658.0",
+    "@aws-sdk/client-sts": "^3.658.0",
     "@aws-sdk/lib-dynamodb": "^3.658.0"
   }
 }
