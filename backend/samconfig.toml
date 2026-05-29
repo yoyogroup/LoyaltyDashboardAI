@@ -1,0 +1,17 @@
+# SAM deploy config — checked in so CI (and any developer machine) deploys
+# the same stack consistently. No secrets here; the Resend / SMS / nineteen58
+# API keys are populated post-deploy via `aws secretsmanager put-secret-value`.
+version = 0.1
+
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "yoyo-loyalty-auth"
+region = "eu-west-1"
+# Let SAM create/reuse a managed deployment bucket — avoids hard-coding a name.
+resolve_s3 = true
+# Named IAM capability required because the template assigns explicit
+# FunctionNames (yoyo-loyalty-*-yoyo-loyalty-auth).
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+confirm_changeset = false
+fail_on_empty_changeset = false

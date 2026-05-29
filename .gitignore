@@ -3,7 +3,8 @@ backend/src/node_modules/
 
 # SAM build artifacts
 backend/.aws-sam/
-backend/samconfig.toml
+# Note: backend/samconfig.toml IS checked in — it pins stack/region for CI.
+# Contains no secrets (keys live in Secrets Manager).
 
 # Local env files (never commit)
 .env
