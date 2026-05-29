@@ -208,6 +208,16 @@
     .btn-orange:hover { background:var(--orange-lt); }
     .btn-green  { background:#10B981; color:white; box-shadow:0 2px 8px rgba(16,185,129,0.28); }
     .btn-green:hover  { background:#0FA372; }
+    .btn-green:disabled { background:#94D7B9; cursor:wait; box-shadow:none; }
+
+    /* WhatsApp channel onboarding feedback line */
+    .wa-channel-status {
+      margin-top:6px; padding:12px 14px; border-radius:12px;
+      font-size:13px; line-height:1.45;
+    }
+    .wa-channel-status.is-info  { background:#EAF7F0; color:#0F6B47; border:1px solid #B6E3CC; }
+    .wa-channel-status.is-error { background:#FEECEC; color:#9B1C1C; border:1px solid #F5C2C2; }
+    .wa-channel-status a { color:inherit; text-decoration:underline; font-weight:600; }
 
     /* ── CONTENT ── */
     .content { padding:28px 30px 40px; flex:1; }
@@ -1620,6 +1630,18 @@
         <div class="seg-field"><label>Address</label>
           <input class="seg-input" type="text" value="14 Main Street, Sea Point, Cape Town, 8005"></div>
       </div>
+    </div>
+
+    <!-- WhatsApp channel — connect your own number via nineteen58 -->
+    <div class="chart-card" style="margin-bottom:18px">
+      <div class="chart-header" style="margin-bottom:16px">
+        <div>
+          <div class="chart-title">WhatsApp channel</div>
+          <div class="chart-sub">Connect your own WhatsApp Business number so loyalty messages come from your brand. The setup link is valid for 24 hours.</div>
+        </div>
+        <button class="btn btn-green" id="createWaChannelBtn" onclick="createWhatsAppChannel()">Create WhatsApp Channel</button>
+      </div>
+      <div id="waChannelStatus" class="wa-channel-status" hidden></div>
     </div>
 
     <!-- WhatsApp cover image -->
@@ -3752,6 +3774,70 @@ function sendCampaignNow() {
   } else {
     // Backend/auth not live yet — simulate so the journey still completes.
     console.info('[SMS] simulated (backend not live). Would send:', _campMessage);
+  }
+}
+
+// ═══════════════════ WHATSAPP CHANNEL CREATION ═══════════════════
+// Calls our own backend (POST {apiBase}/channels/whatsapp/create) with the
+// session JWT. The Lambda forwards to nineteen58 using the x-api-key held
+// in Secrets Manager and returns a one-time onboarding URL we open in a
+// new tab. The key NEVER reaches the browser; the channel label is derived
+// server-side from JWT claims so the client cannot impersonate a brand.
+async function createWhatsAppChannel() {
+  const btn = document.getElementById('createWaChannelBtn');
+  const status = document.getElementById('waChannelStatus');
+  if (!btn || !status) return;
+
+  const setStatus = (msg, kind) => {
+    status.hidden = false;
+    status.className = 'wa-channel-status ' + (kind === 'error' ? 'is-error' : 'is-info');
+    // Always assemble via DOM nodes — never innerHTML with dynamic data.
+    status.textContent = '';
+    status.appendChild(document.createTextNode(msg));
+  };
+
+  // Demo / pre-launch path: if auth is off, simulate so the journey works.
+  const cfg = window.YOYO_CONFIG;
+  if (!cfg || !cfg.AUTH_ENABLED || !window.YoyoAuth) {
+    setStatus('Backend not connected yet — onboarding link will appear once auth is enabled.', 'info');
+    return;
+  }
+
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = 'Generating link…';
+  setStatus('Creating your WhatsApp channel onboarding link…', 'info');
+
+  try {
+    const resp = await window.YoyoAuth.authFetch('/channels/whatsapp/create', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+
+    if (!resp.ok) {
+      setStatus('Could not create your channel right now. Please try again in a minute.', 'error');
+      return;
+    }
+
+    const data = await resp.json().catch(() => ({}));
+    const url = data && typeof data.onboarding_url === 'string' ? data.onboarding_url : '';
+
+    // Defence-in-depth: only open https URLs we got back from our own backend.
+    if (!/^https:\/\//i.test(url)) {
+      setStatus('The onboarding link looked invalid. Please try again.', 'error');
+      return;
+    }
+
+    // noopener strips window.opener; noreferrer omits the Referer header.
+    window.open(url, '_blank', 'noopener,noreferrer');
+
+    setStatus('Onboarding link opened in a new tab. It is valid for 24 hours — complete setup there to activate your channel.', 'info');
+  } catch (err) {
+    console.warn('[WA-channel] create failed:', err);
+    setStatus('Network error while creating your channel. Please check your connection and try again.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
   }
 }
 
