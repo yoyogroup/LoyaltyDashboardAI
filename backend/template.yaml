@@ -48,6 +48,20 @@ Parameters:
       TEST PHASE recipient — every campaign send goes here so the journey can
       be verified. Replace with the real audience flow before go-live.
 
+  Nineteen58Endpoint:
+    Type: String
+    Default: https://app.nineteen58.dev/api/v1/whatsapp/onboarding-links
+    Description: >
+      nineteen58 onboarding-link endpoint. Returns a single-use WhatsApp
+      channel onboarding URL that the merchant opens in a new tab.
+
+  WhatsAppLinkExpiryHours:
+    Type: Number
+    Default: 24
+    MinValue: 1
+    MaxValue: 168
+    Description: How long a generated nineteen58 onboarding link stays valid (hours).
+
 # ─────────────────────────────────────────────────────────────────────
 # Globals — applied to every function
 # ─────────────────────────────────────────────────────────────────────
@@ -73,6 +87,9 @@ Globals:
         SMS_ENDPOINT: !Ref SmsEndpoint
         SMS_SECRET_ARN: !Ref SmsApiKeySecret
         TEST_SMS_MOBILE: !Ref TestSmsMobile
+        NINETEEN58_ENDPOINT: !Ref Nineteen58Endpoint
+        NINETEEN58_SECRET_ARN: !Ref Nineteen58ApiKeySecret
+        WHATSAPP_LINK_EXPIRY_HOURS: !Ref WhatsAppLinkExpiryHours
 
 # ─────────────────────────────────────────────────────────────────────
 # Resources
@@ -143,6 +160,18 @@ Resources:
       Name: !Sub yoyo-loyalty/sms-api-key-${AWS::StackName}
       Description: API key (apiKey header) for the Yoyo SMS integration service.
       # No SecretString here — set it via `aws secretsmanager put-secret-value`.
+
+  # ─── Secrets: nineteen58 API key (you populate post-deploy) ───────
+  # NEVER commit or paste this in chat. After `sam deploy`, set it with:
+  #   read -rsp "Paste nineteen58 key: " KEY && echo
+  #   aws secretsmanager put-secret-value \
+  #     --secret-id <this-secret-arn> --secret-string "$KEY" --region eu-west-1
+  #   unset KEY
+  Nineteen58ApiKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub yoyo-loyalty/nineteen58-api-key-${AWS::StackName}
+      Description: nineteen58 x-api-key for generating WhatsApp onboarding links.
 
   # ─── API Gateway HTTP API (cheap + fast) ──────────────────────────
   AuthApi:
@@ -242,6 +271,30 @@ Resources:
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: !Ref SmsApiKeySecret
 
+  # ─── Lambda: create-whatsapp-channel (nineteen58 onboarding link) ─
+  # Verifies the caller's session JWT, then mints a one-time WhatsApp
+  # onboarding link via the nineteen58 API. The API key lives ONLY in
+  # Secrets Manager — never in the browser, never in env at rest beyond
+  # the ARN reference.
+  CreateWhatsAppChannelFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub yoyo-loyalty-create-wa-channel-${AWS::StackName}
+      CodeUri: src/
+      Handler: create-whatsapp-channel.handler
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Method: POST
+            Path: /channels/whatsapp/create
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref JwtSigningSecret
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref Nineteen58ApiKeySecret
+
 # ─────────────────────────────────────────────────────────────────────
 # Outputs
 # ─────────────────────────────────────────────────────────────────────
@@ -255,6 +308,9 @@ Outputs:
   SmsSecretArn:
     Description: Put the SMS service apiKey here with `aws secretsmanager put-secret-value`.
     Value: !Ref SmsApiKeySecret
+  Nineteen58SecretArn:
+    Description: Put the nineteen58 x-api-key here with `aws secretsmanager put-secret-value`.
+    Value: !Ref Nineteen58ApiKeySecret
   JwtSecretArn:
     Description: JWT signing key — auto-generated; rotate quarterly.
     Value: !Ref JwtSigningSecret
