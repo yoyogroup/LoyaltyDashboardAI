@@ -206,6 +206,8 @@
     .btn-primary:hover { background:var(--navy-mid); }
     .btn-orange { background:var(--orange); color:white; box-shadow:0 2px 8px rgba(232,92,42,0.3); }
     .btn-orange:hover { background:var(--orange-lt); }
+    .btn-green  { background:#10B981; color:white; box-shadow:0 2px 8px rgba(16,185,129,0.28); }
+    .btn-green:hover  { background:#0FA372; }
 
     /* ── CONTENT ── */
     .content { padding:28px 30px 40px; flex:1; }
@@ -1331,7 +1333,7 @@
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
           <button class="btn btn-ghost" onclick="showToast('Viewing all customers')">View all</button>
-          <button class="btn btn-orange" id="targetSegBtn" onclick="openCampaignModal()">
+          <button class="btn btn-green" id="targetSegBtn" onclick="openCampaignModal()">
             <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
             Target segment
           </button>
